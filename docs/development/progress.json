@@ -38,21 +38,24 @@
     {
       "id": 3,
       "name": "Policy-as-code and multitenancy",
-      "status": "VERIFIED",
+      "status": "RELEASED",
       "release": "v0.3.0",
       "issues": [],
       "evidence": [
-        "inheritance, diff/simulate/explain/templates, tenant rewrite, audit metadata; 1,804 tests pass locally"
+        "inheritance, diff/simulate/explain/templates, tenant rewrite, audit metadata; 1,804 tests pass locally",
+        "v0.3.0 on PyPI; fresh install verified"
       ],
       "blockers": []
     },
     {
       "id": 4,
       "name": "MCP server",
-      "status": "NOT_STARTED",
-      "release": "v0.3.0",
+      "status": "VERIFIED",
+      "release": "v0.4.0",
       "issues": [],
-      "evidence": [],
+      "evidence": [
+        "stdio server; 9 tests incl. official SDK ClientSession"
+      ],
       "blockers": []
     },
     {

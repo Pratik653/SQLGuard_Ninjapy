@@ -273,6 +273,19 @@ def cmd_policy_explain(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_mcp(args: argparse.Namespace) -> int:  # pragma: no cover - blocks on stdio
+    try:
+        from sqlguard_ninja.mcp_server import ServerIdentity, serve  # noqa: PLC0415
+    except ImportError as exc:
+        raise CLIError('the MCP server needs: pip install "sqlguard-ninja[mcp]"') from exc
+    policy = _load_policy(args.policy)
+    try:
+        serve(policy, ServerIdentity(role=args.role, tenant=args.tenant), args.dialect)
+    except ValueError as exc:
+        raise CLIError(str(exc)) from exc
+    return EXIT_OK
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.directory)
     existing = [name for name in FILES if (root / name).exists()]
@@ -557,6 +570,13 @@ def build_parser() -> argparse.ArgumentParser:
     bb.add_argument("--output")
     bb.add_argument("--i-understand-this-is-ci", action="store_true", help=argparse.SUPPRESS)
     bb.set_defaults(func=cmd_benchmark_baseline)
+
+    mcp = sub.add_parser("mcp", help="run the MCP server (stdio) for a fixed role and tenant")
+    mcp.add_argument("--policy", required=True, help="policy file or builtin:<name>")
+    mcp.add_argument("--role", required=True, help="trusted role for every request")
+    mcp.add_argument("--tenant", help="trusted tenant for every request")
+    mcp.add_argument("--dialect")
+    mcp.set_defaults(func=cmd_mcp)
 
     rep = sub.add_parser("report", help="reports").add_subparsers(dest="report_cmd", required=True)
     rg = rep.add_parser("generate", help="render a Markdown report from a result JSON")

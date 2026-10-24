@@ -3,6 +3,17 @@
 All notable changes are documented here. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, minor versions may change the API.
 
+## [0.4.0] — 2026-10-24
+
+### Added
+* **MCP server** (`sqlninja mcp`, `sqlguard_ninja.mcp_server`, extra `[mcp]` on the official
+  MCP Python SDK 2.x). Tools: `validate_sql`, `explain_policy_decision`,
+  `inspect_query_cost`, `get_policy_capabilities`. The role and tenant are fixed server-side,
+  there is no execution and no database connection, internal detail is withheld, ungranted
+  tables and columns are not disclosed, input is size-capped, and calls are rate-limited.
+* An end-to-end test drives the real server over stdio with the SDK's `ClientSession`.
+* Docs: `docs/guides/MCP_INTEGRATION.md`; threat model T17.
+
 ## [0.3.0] — 2026-10-24
 
 ### Added

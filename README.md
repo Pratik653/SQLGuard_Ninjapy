@@ -207,6 +207,20 @@ Optional: `SQLCheckpoint(..., rewrite_tenant_filters=True)` adds missing tenant 
 through the AST and executes only the re-validated rewrite. See
 [POLICY_AS_CODE.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/POLICY_AS_CODE.md).
 
+## MCP server
+
+Let MCP-compatible agents check SQL against your policy before running it anywhere:
+
+```bash
+python -m pip install "sqlguard-ninja[mcp]"
+sqlninja mcp --policy builtin:retail_saas --role support_analyst --tenant 1
+```
+
+The four tools are `validate_sql`, `explain_policy_decision`, `inspect_query_cost` and
+`get_policy_capabilities`. The role and tenant are fixed server-side, the server never connects
+to a database, and it exposes no execution tool. Tested with the official MCP Python SDK
+client over stdio. See [MCP_INTEGRATION.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/MCP_INTEGRATION.md).
+
 ## Query cost analysis
 
 Every validation includes an explainable static score that uses the catalog's
@@ -302,6 +316,7 @@ writes, more tested dialects, and SARIF output. Details in [ROADMAP.md](https://
 
 * [Policy reference](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/POLICY_REFERENCE.md)
 * [Policy as code](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/POLICY_AS_CODE.md)
+* [MCP integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/MCP_INTEGRATION.md)
 * [Agent integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/AGENT_INTEGRATION.md)
 * [Query cost](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/QUERY_COST.md)
 * [CI integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/CI_INTEGRATION.md)

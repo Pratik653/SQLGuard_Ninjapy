@@ -10,3 +10,6 @@
 | 2026-10-24 | v0.2.0 publish | release.yml run 40108113801 | build + publish success; wheel and sdist with PEP 740 provenance; 0.1.0 and 0.1.1 unchanged |
 | 2026-10-24 | v0.2.0 fresh install | `pip install --no-cache-dir --index-url https://pypi.org/simple sqlguard-ninja==0.2.0` (Python 3.13, outside repo) | import from site-packages; lineage allow/deny and tenant push-down via CLI; bundled benchmark 1,044 evaluations with CSV, tiers, 14 file hashes |
 | 2026-10-24 | v0.3.0 candidate | full gate | 1,804 passed, 94%; build + twine PASSED; 3 templates in wheel |
+| 2026-10-24 | v0.3.0 release | PR #19 12/12; main CI on 198a308 success; release.yml run 40115952065 success | PyPI files with provenance |
+| 2026-10-24 | v0.3.0 fresh install | pip from PyPI, Python 3.13, outside repo (3rd attempt; CDN lag) | templates, policy check/explain (inheritance), tenant rewrite, decision metadata OK |
+| 2026-10-24 | v0.4.0 candidate (MCP) | tests/integration/test_mcp_server.py | 9 passed, including a real stdio ClientSession |
