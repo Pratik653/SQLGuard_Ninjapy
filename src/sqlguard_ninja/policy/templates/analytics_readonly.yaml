@@ -1,0 +1,31 @@
+# Analytics: personal data only in aggregate; identifiers trigger small-cohort review.
+version: 1
+name: analytics_readonly
+metadata: {revision: "0.1", owner: "replace-me"}
+dialect: postgres
+labels:
+  personal: {sensitivity: high}
+  financial: {sensitivity: high}
+catalog:
+  default_schema: public
+  tables:
+    sales:
+      estimated_rows: 50000000
+      columns:
+        id: int
+        customer_id: {type: int, identifying: true}
+        region: text
+        amount: {type: numeric, labels: [financial]}
+        sold_at: timestamp
+    customers:
+      columns:
+        id: {type: int, identifying: true}
+        age: {type: int, labels: [personal]}
+        region: text
+roles:
+  analyst:
+    tables: {sales: "*", customers: [id, age, region]}
+    labels: {financial: aggregate_only, personal: aggregate_only}
+    limits: {max_limit: 10000, require_limit: false, max_joins: 3}
+functions: {mode: allowlist, allow: [count, sum, avg, stddev, round, date_trunc, coalesce]}
+cost: {review_score: 40, deny_score: 70, large_table_rows: 1000000}

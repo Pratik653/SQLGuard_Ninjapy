@@ -1,0 +1,17 @@
+# Minimal policy: one table, one role, no tenancy. Labels are assigned explicitly by you.
+version: 1
+name: minimal
+metadata: {revision: "0.1", owner: "replace-me"}
+dialect: postgres
+labels:
+  contact: {sensitivity: high}
+catalog:
+  default_schema: public
+  tables:
+    products:
+      columns: {id: int, name: text, price: numeric, supplier_email: {labels: [contact]}}
+roles:
+  analyst:
+    tables: {products: "*"}
+    labels: {contact: deny}
+functions: {mode: allowlist, allow: [count, sum, avg, min, max, round, lower, upper, coalesce]}

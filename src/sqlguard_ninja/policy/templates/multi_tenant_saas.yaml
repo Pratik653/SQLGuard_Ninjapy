@@ -1,0 +1,53 @@
+# Multi-tenant SaaS: every tenant table must be pinned to the caller's tenant.
+# Roles inherit from `tenant_base`; explicit denies there cannot be relaxed by children.
+version: 1
+name: multi_tenant_saas
+metadata: {revision: "0.1", owner: "replace-me", change_ticket: null}
+dialect: postgres
+labels:
+  contact: {sensitivity: high, masking: return the email domain}
+  financial: {sensitivity: high, masking: aggregate}
+  payment_card: {sensitivity: critical, masking: use card_last4}
+catalog:
+  default_schema: public
+  tables:
+    customers:
+      tenant_column: tenant_id
+      columns:
+        id: {type: int, identifying: true}
+        tenant_id: int
+        name: text
+        email: {labels: [contact], alternatives: [email_domain]}
+        email_domain: text
+    orders:
+      tenant_column: tenant_id
+      columns:
+        id: int
+        tenant_id: int
+        customer_id: int
+        status: text
+        total: {type: numeric, labels: [financial]}
+    payments:
+      tenant_column: tenant_id
+      columns:
+        id: int
+        tenant_id: int
+        order_id: int
+        card_number: {labels: [payment_card], alternatives: [card_last4]}
+        card_last4: text
+roles:
+  tenant_base:
+    description: Common rules for every tenant-scoped role.
+    tenant_scoped: true
+    labels: {payment_card: deny}
+  support:
+    extends: [tenant_base]
+    tables: {customers: "*", orders: [id, tenant_id, customer_id, status]}
+    labels: {contact: allow}
+  finance:
+    extends: [tenant_base]
+    tables: {orders: "*", payments: [id, tenant_id, order_id, card_last4]}
+    labels: {financial: aggregate_only}
+tenant: {context_key: tenant_id, parameter_names: [tenant_id]}
+functions: {mode: allowlist, allow: [count, sum, avg, min, max, round, lower, upper, coalesce, date_trunc]}
+limits: {max_limit: 1000, max_joins: 4}

@@ -36,6 +36,15 @@ from sqlguard_ninja.cli.templates import FILES
 from sqlguard_ninja.core.findings import Decision
 from sqlguard_ninja.core.guard import Guard
 from sqlguard_ninja.policy.model import Policy, PolicyError
+from sqlguard_ninja.policy.tools import (
+    TEMPLATES,
+    diff_policies,
+    explain_column,
+    explain_result,
+    load_sim_cases,
+    simulate,
+    template_text,
+)
 from sqlguard_ninja.privacy.suggest import suggest_labels
 from sqlguard_ninja.reporting.markdown import benchmark_report, comparison_report
 
@@ -173,6 +182,94 @@ def cmd_policy_suggest(args: argparse.Namespace) -> int:
         _out("# no unlabelled columns matched the heuristics")
     for s in suggestions:
         _out(f"{s.table}.{s.column}: [{s.label}]   # matched '{s.matched}'")
+    return EXIT_OK
+
+
+def cmd_policy_template(args: argparse.Namespace) -> int:
+    if not args.kind:
+        _out("available templates: " + ", ".join(TEMPLATES))
+        return EXIT_OK
+    try:
+        text = template_text(args.kind)
+    except KeyError as exc:
+        raise CLIError(str(exc.args[0])) from exc
+    if args.output:
+        path = Path(args.output)
+        if path.exists() and not args.force:
+            raise CLIError(f"refusing to overwrite {path}; use --force")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        _out(f"wrote {path}")
+    else:
+        _out(text)
+    return EXIT_OK
+
+
+def cmd_policy_diff(args: argparse.Namespace) -> int:
+    old, new = _load_policy(args.old), _load_policy(args.new)
+    diff = diff_policies(old, new)
+    if args.format == "json":
+        _out(json.dumps(diff.as_dict(), indent=2, default=str))
+    else:
+        _out(
+            f"policy diff {old.revision} ({old.fingerprint}) -> {new.revision} "
+            f"({new.fingerprint}): {len(diff.changes)} change(s), "
+            f"{len(diff.relaxations)} relaxation(s)"
+        )
+        for c in diff.changes:
+            _out(f"  [{c.effect.value:9}] {c.path}: {c.before!s} -> {c.after!s}")
+    if args.fail_on_relaxation and diff.relaxations:
+        return EXIT_FAIL
+    return EXIT_OK
+
+
+def cmd_policy_simulate(args: argparse.Namespace) -> int:
+    policy = _load_policy(args.policy)
+    against = _load_policy(args.against) if args.against else None
+    try:
+        cases = load_sim_cases(args.cases)
+    except (OSError, ValueError, yaml.YAMLError) as exc:
+        raise CLIError(f"cannot load cases {args.cases}: {exc}") from exc
+    rows = simulate(policy, cases, against)
+    if args.format == "json":
+        _out(json.dumps(rows, indent=2))
+    else:
+        for r in rows:
+            line = f"{r['id']:>6} {r['role'] or '-':18} {r['decision']:6}"
+            if against is not None:
+                marker = " CHANGED" if r["changed"] else ""
+                line += f" -> {r['candidate_decision']:6}{marker}"
+            if r["expect"] is not None:
+                line += f"  expect={r['expect']}"
+            _out(line)
+    key = "candidate_matches_expectation" if against is not None else "matches_expectation"
+    mismatches = sum(1 for r in rows if r.get(key) is False)
+    changed = sum(1 for r in rows if r.get("changed"))
+    _out(f"{len(rows)} case(s); {mismatches} expectation mismatch(es); {changed} changed")
+    if mismatches or (args.fail_on_change and changed):
+        return EXIT_FAIL
+    return EXIT_OK
+
+
+def cmd_policy_explain(args: argparse.Namespace) -> int:
+    policy = _load_policy(args.policy)
+    if bool(args.sql) == bool(args.column):
+        raise CLIError("give exactly one of --sql or --column TABLE.COLUMN")
+    if args.column:
+        table, _, column = args.column.partition(".")
+        try:
+            payload = explain_column(policy, args.role, table.lower(), column.lower())
+        except KeyError as exc:
+            raise CLIError(str(exc.args[0])) from exc
+    else:
+        context: dict[str, Any] = {}
+        if args.tenant is not None:
+            context[policy.tenant.context_key] = args.tenant
+        result = Guard(policy).validate(
+            args.sql, role=args.role, dialect=args.dialect, context=context
+        )
+        payload = explain_result(result)
+    _out(json.dumps(payload, indent=2, default=str))
     return EXIT_OK
 
 
@@ -392,6 +489,34 @@ def build_parser() -> argparse.ArgumentParser:
     common(ps)
     ps.add_argument("--policy")
     ps.set_defaults(func=cmd_policy_suggest)
+    pt = pol.add_parser("template", help="print or write a policy template")
+    pt.add_argument("kind", nargs="?", help="template name (omit to list)")
+    pt.add_argument("--output")
+    pt.add_argument("--force", action="store_true")
+    pt.set_defaults(func=cmd_policy_template)
+    pd = pol.add_parser("diff", help="semantic diff of two policies, flagging relaxations")
+    pd.add_argument("old")
+    pd.add_argument("new")
+    pd.add_argument("--format", choices=["text", "json"], default="text")
+    pd.add_argument("--fail-on-relaxation", action="store_true")
+    pd.set_defaults(func=cmd_policy_diff)
+    psim = pol.add_parser(
+        "simulate", help="evaluate example queries; optionally against a candidate"
+    )
+    psim.add_argument("--policy", required=True)
+    psim.add_argument("--cases", required=True, help="YAML list of {sql, role, context, expect}")
+    psim.add_argument("--against", help="candidate policy to compare with")
+    psim.add_argument("--format", choices=["text", "json"], default="text")
+    psim.add_argument("--fail-on-change", action="store_true")
+    psim.set_defaults(func=cmd_policy_simulate)
+    pe = pol.add_parser("explain", help="explain a decision or a column's effective access")
+    pe.add_argument("--policy", required=True)
+    pe.add_argument("--role", required=True)
+    pe.add_argument("--sql")
+    pe.add_argument("--column", help="TABLE.COLUMN")
+    pe.add_argument("--dialect")
+    pe.add_argument("--tenant")
+    pe.set_defaults(func=cmd_policy_explain)
 
     bench = sub.add_parser("benchmark", help="run and compare benchmarks").add_subparsers(
         dest="bench_cmd", required=True
