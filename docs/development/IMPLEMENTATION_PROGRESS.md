@@ -11,4 +11,4 @@
 | 2d Docs, ADR-011/012, v0.3.0 bump | RELEASED v0.3.0 | 198a308 | full gate 1,804 passed, 94% | |
 | 3 MCP server (stdio, validation-only) | RELEASED v0.4.0 | ecec4da | 9 tests incl. real SDK client; published-package stdio smoke test | version targets adapted |
 | 4 MySQL tested dialect; SQL Server/Oracle experimental; compatibility matrix | RELEASED v0.5.0 | de4d03f | full gate 1,881 passed, 94%; CI MySQL 8.4: 15 passed, 0 skipped | sql_mode parser differential found and closed (T18) |
-| 5 Observability: OTel spans, Prometheus metrics, audit schema, SARIF scan, Grafana + synthetic stack | VERIFIED (local, CI pending) | see PR | full gate 1,916 passed, 94% | redaction leak (hex/E''/$$/U&/N''/INTERVAL) found and fixed (T19) |
+| 5 Observability: OTel spans, Prometheus metrics, audit schema, SARIF scan, Grafana + synthetic stack | RELEASED v0.6.0 | 3867989 | full gate 1,916 passed, 94%; CI stack: 224 decisions scraped, Grafana query success | redaction leak (hex/E''/$$/U&/N''/INTERVAL) found and fixed (T19) |
