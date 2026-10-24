@@ -5,8 +5,13 @@ security, statement timeouts, resource limits or authentication.
 
 ## Scope
 * Read-only workloads only (v0.1). All writes are denied.
-* Dialects: PostgreSQL and SQLite are tested. Other sqlglot dialects parse but are
-  **experimental** and not covered by the benchmark.
+* Dialects: PostgreSQL, SQLite and MySQL 8 are tested (MySQL within the scope in
+  `docs/guides/DATABASE_COMPATIBILITY.md`). SQL Server and Oracle are parser-level
+  **experimental**; Oracle denies everything against a lower-case catalog. Other sqlglot
+  dialects are untested.
+* MySQL identifier case is not folded: `o.ID` or `Orders` is denied even where MySQL would
+  accept it. MySQL execution supports named placeholders with integer or plain string values
+  only.
 * Policy identifiers are matched in lower case. Quoted mixed-case table names
   (`"Orders"` in PostgreSQL) are treated as unknown tables and denied.
 
@@ -36,7 +41,7 @@ security, statement timeouts, resource limits or authentication.
 ## Query cost
 * The static score uses declared `estimated_rows`; the planner uses real statistics. They
   can disagree, and neither predicts runtime.
-* Plan inspection is PostgreSQL-only.
+* Plan inspection is PostgreSQL-only (not MySQL).
 
 ## Benchmark
 * The corpus is authored by this project. Allow labels are validated by execution on SQLite

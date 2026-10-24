@@ -39,7 +39,8 @@ fastapi = ["fastapi>=0.110"]
 # Official MCP Python SDK; 2.x renamed FastMCP to MCPServer.
 mcp = ["mcp>=2.3,<3"]
 postgres = ["psycopg[binary]>=3.1"]
-all = ["sqlguard-ninja[langchain,langgraph,fastapi,postgres,mcp]"]
+mysql = ["PyMySQL>=1.1"]
+all = ["sqlguard-ninja[langchain,langgraph,fastapi,postgres,mysql,mcp]"]
 dev = [
     "sqlguard-ninja[all]",
     "pytest>=8.0",
@@ -81,6 +82,7 @@ addopts = "-ra --strict-markers -p no:cacheprovider --basetemp=.pytest_tmp"
 markers = [
     "postgres: needs a PostgreSQL server (SQLNINJA_PG_DSN or pgserver)",
     "performance: latency measurements",
+    "mysql: needs a MySQL server (SQLNINJA_MYSQL_DSN)",
 ]
 filterwarnings = ["error::DeprecationWarning:sqlguard_ninja.*"]
 
@@ -120,5 +122,5 @@ exclude = ["src/sqlguard_ninja/benchmarking/workers/"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["langgraph.*", "langchain_core.*", "psycopg.*", "pgserver.*", "mcp.*"]
+module = ["langgraph.*", "langchain_core.*", "psycopg.*", "pgserver.*", "mcp.*", "pymysql.*"]
 ignore_missing_imports = true

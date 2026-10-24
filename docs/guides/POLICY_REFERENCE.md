@@ -111,14 +111,20 @@ unknown functions) never block.
 ```python
 from sqlguard_ninja import Action, Category, Finding, Guard, Severity
 
+
 class NoOrderByRandom:
     rule_ids = ("custom.order_by_random",)
 
     def check(self, ctx):
         if "RANDOM()" in ctx.analysis.sql.upper():
-            yield Finding(rule_id="custom.order_by_random", category=Category.COST,
-                          severity=Severity.LOW, action=Action.REVIEW,
-                          message="ORDER BY RANDOM() scans the whole table.")
+            yield Finding(
+                rule_id="custom.order_by_random",
+                category=Category.COST,
+                severity=Severity.LOW,
+                action=Action.REVIEW,
+                message="ORDER BY RANDOM() scans the whole table.",
+            )
+
 
 guard = Guard(policy).with_rules([NoOrderByRandom()])
 ```

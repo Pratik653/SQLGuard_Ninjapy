@@ -1,0 +1,143 @@
+# MySQL dialect cases (corpus 1.2.0). `allow` cases are executed against MySQL 8 in CI
+# (tests/integration/test_mysql.py) as a SELECT-only account inside a read-only transaction.
+defaults:
+  dialects: [mysql]
+  role: support_analyst
+  category: dialect_mysql
+cases:
+  # ---- legitimate MySQL syntax that must not be blocked
+  - id: MY-001
+    sql: SELECT `o`.`id`, `o`.`status` FROM `orders` AS `o` WHERE `o`.`tenant_id` = 1
+    expected: allow
+    explanation: Backtick-quoted lower-case identifiers name the granted table and columns.
+  - id: MY-002
+    sql: SELECT o.id FROM orders o WHERE o.tenant_id = 1 ORDER BY o.id LIMIT 10, 5
+    expected: allow
+    explanation: MySQL offset-first LIMIT form.
+  - id: MY-003
+    sql: SELECT o.status, COUNT(*) AS n FROM orders o WHERE o.tenant_id = 1 GROUP BY o.status WITH ROLLUP
+    expected: allow
+    explanation: GROUP BY ... WITH ROLLUP.
+  - id: MY-004
+    sql: SELECT o.id FROM orders o WHERE o.tenant_id = 1 AND o.status REGEXP '^p'
+    expected: allow
+    explanation: REGEXP operator.
+  - id: MY-005
+    sql: SELECT o.id, IFNULL(s.carrier, 'none') AS carrier FROM orders o LEFT JOIN shipments s ON s.order_id = o.id AND s.tenant_id = 1 WHERE o.tenant_id = 1
+    expected: allow
+    explanation: LEFT JOIN with a pinned ON clause and IFNULL.
+  - id: MY-006
+    sql: WITH recent AS (SELECT o.id, o.customer_id FROM orders o WHERE o.tenant_id = 1) SELECT r.customer_id, COUNT(*) AS n FROM recent r GROUP BY r.customer_id
+    expected: allow
+    explanation: CTE (MySQL 8).
+  - id: MY-007
+    sql: SELECT o.id, ROW_NUMBER() OVER (PARTITION BY o.customer_id ORDER BY o.created_at) AS rn FROM orders o WHERE o.tenant_id = 1
+    expected: allow
+    explanation: Window function (MySQL 8).
+  - id: MY-008
+    sql: SELECT c.profile->>'$.preferences.language' AS lang FROM customers c WHERE c.tenant_id = 1
+    expected: allow
+    explanation: JSON path on an unclassified field.
+  - id: MY-009
+    sql: SELECT o.id FROM orders o WHERE o.tenant_id = :tenant_id
+    expected: allow
+    explanation: Approved named bind parameter (bound by the MySQL executor).
+  - id: MY-010
+    sql: SELECT DATE_FORMAT(o.created_at, '%Y-%m') AS m, SUM(o.total_amount) AS revenue FROM orders o WHERE o.tenant_id = 1 GROUP BY m
+    expected: allow
+    explanation: Percent signs inside a literal are not driver format markers.
+  # ---- tenant isolation
+  - id: MY-101
+    sql: SELECT o.id FROM orders o
+    expected: deny
+    reason: tenant_isolation
+    explanation: Missing tenant filter.
+  - id: MY-102
+    sql: SELECT o.id FROM orders o WHERE o.tenant_id = 2
+    expected: deny
+    reason: tenant_isolation
+    classification: malicious
+    explanation: Another tenant.
+  - id: MY-103
+    sql: SELECT o.id FROM orders o JOIN shipments s ON s.order_id = o.id WHERE o.tenant_id = 1
+    expected: deny
+    reason: tenant_isolation
+    explanation: Joined tenant table unpinned.
+  - id: MY-104
+    sql: SELECT o.id FROM orders o WHERE o.tenant_id = 1 OR 1 = 1
+    expected: deny
+    reason: tenant_isolation
+    classification: malicious
+    explanation: Disjunction removes the pin.
+  # ---- sensitive data
+  - id: MY-201
+    sql: SELECT p.card_number FROM payments p WHERE p.tenant_id = 1
+    expected: deny
+    reason: sensitive_data
+    explanation: Card numbers are denied for support.
+  - id: MY-202
+    sql: SELECT c.profile->>'$.health.allergies' AS a FROM customers c WHERE c.tenant_id = 1
+    expected: deny
+    reason: sensitive_data
+    explanation: Special-category JSON path.
+  - id: MY-203
+    role: hr_analyst
+    sql: SELECT e.department, AVG(e.salary) AS avg_salary FROM employees e GROUP BY e.department
+    expected: allow
+    explanation: Aggregate-only salary in AVG.
+  - id: MY-204
+    role: hr_analyst
+    sql: SELECT e.full_name, e.salary FROM employees e
+    expected: deny
+    reason: aggregate_only
+    explanation: Individual salaries.
+  # ---- read-only enforcement and MySQL-specific statements
+  - id: MY-301
+    sql: SELECT o.id FROM orders o WHERE o.tenant_id = 1 /*!50000 UNION SELECT 1 */
+    expected: deny
+    reason: write_statement
+    classification: malicious
+    explanation: MySQL executes /*! */ comment bodies; the guard rejects them outright.
+  - id: MY-302
+    sql: REPLACE INTO orders (id, tenant_id, status) VALUES (1, 1, 'paid')
+    expected: deny
+    reason: write_statement
+    classification: malicious
+    explanation: REPLACE is a write.
+  - id: MY-303
+    sql: SELECT o.id FROM orders o WHERE o.tenant_id = 1 LOCK IN SHARE MODE
+    expected: deny
+    reason: write_statement
+    explanation: Row locks.
+  - id: MY-304
+    sql: SET SESSION sql_mode = ''
+    expected: deny
+    reason: unsupported_statement
+    explanation: Session change.
+  - id: MY-305
+    sql: SELECT o.id FROM orders o WHERE o.tenant_id = 1; DELETE FROM orders
+    expected: deny
+    reason: multiple_statements
+    classification: malicious
+    explanation: Stacked statements.
+  - id: MY-306
+    sql: HANDLER orders OPEN
+    expected: deny
+    reason: parse_error
+    explanation: HANDLER statements are not parsed and fail closed.
+  # ---- identifiers (conservative, documented)
+  - id: MY-401
+    sql: SELECT o.ID FROM orders o WHERE o.tenant_id = 1
+    expected: deny
+    reason: unresolvable
+    classification: policy_violation
+    explanation: >-
+      MySQL column names are case-insensitive, but the guard does not fold identifier case for
+      MySQL (folding table names could merge distinct tables on case-sensitive file systems).
+      Mixed-case column references therefore fail closed. This is a documented false positive.
+  - id: MY-402
+    sql: SELECT o.id FROM Orders o WHERE o.tenant_id = 1
+    expected: deny
+    reason: unauthorized_table
+    classification: policy_violation
+    explanation: Table names are compared exactly; `Orders` is not the granted `orders`.

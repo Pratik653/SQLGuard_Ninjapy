@@ -146,3 +146,23 @@ relaxations so reviewers and CI can gate them.
 **Decision.** v0.1 validates read-only workloads only. All writes are denied. Supporting governed
 writes (UPDATE/DELETE with mandatory tenant predicates) is on the roadmap. Doing it properly needs
 its own corpus and threat analysis.
+
+## ADR-013 — MySQL: exact identifiers and AST placeholder binding
+
+**Context.** MySQL folds column names but table-name case depends on `lower_case_table_names`
+and the file system. PyMySQL binds only `%s`/`%(name)s` markers, which sqlglot's MySQL dialect
+cannot parse, so the validated string could not be the executed string.
+
+**Decision.** (1) Identifiers are compared exactly; the guard never folds MySQL identifier case,
+and mixed-case references are denied (fail closed, documented false positive). (2) Validated MySQL
+SQL uses named placeholders. `mysql_executor` parses the validated string, replaces only
+`Placeholder` nodes with literals of trusted context values (integers, or strings with quotes
+doubled; backslash and NUL refused because their meaning depends on `NO_BACKSLASH_ESCAPES`),
+refuses unknown or anonymous placeholders, and sends the result with no driver parameters, inside
+`START TRANSACTION READ ONLY` with `MAX_EXECUTION_TIME`, then rolls back. (3) The guard lexes
+MySQL with server defaults, so the executor refuses sessions whose `sql_mode` contains
+`ANSI`, `ANSI_QUOTES`, `NO_BACKSLASH_ESCAPES`, `PIPES_AS_CONCAT` or `HIGH_NOT_PRECEDENCE`.
+
+**Consequences.** This refines ADR-005: the executed string differs from the validated one only
+in placeholder nodes, which carry server-side values, never user input. Literals and identifiers
+are not rewritten. MySQL support is limited to the scope the CI service-container tests cover.

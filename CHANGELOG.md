@@ -3,6 +3,25 @@
 All notable changes are documented here. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, minor versions may change the API.
 
+## [0.5.0] — 2026-10-24
+
+### Added
+* **MySQL 8** as a tested dialect within a documented scope: `sqlguard_ninja.integrations.mysql`
+  (`mysql_executor`: read-only transaction, `MAX_EXECUTION_TIME`, rollback; `bind_placeholders`:
+  AST-based binding of named placeholders, ADR-013), extra `[mysql]` (PyMySQL), and a MySQL 8.4
+  service-container CI job that executes every MySQL `allow` case as a SELECT-only account.
+* Corpus **1.2.0**: 26 MySQL cases (`cases/09_mysql.yaml`); results in
+  `docs/benchmarks/RESULTS_v1.2.md`.
+* `docs/guides/DATABASE_COMPATIBILITY.md`: compatibility matrix. SQL Server and Oracle are
+  parser-level experimental with smoke tests; they are not accepted by the MCP server.
+* The MCP server accepts `mysql` as a dialect.
+
+### Security
+* MySQL identifiers are compared exactly and never case-folded (fail closed). String values
+  containing a backslash or NUL are refused at binding time. `mysql_executor` refuses sessions
+  whose `sql_mode` changes lexing (`ANSI_QUOTES`, `NO_BACKSLASH_ESCAPES`, `PIPES_AS_CONCAT`,
+  `HIGH_NOT_PRECEDENCE`, `ANSI`); threat model T18.
+
 ## [0.4.0] — 2026-10-24
 
 ### Added

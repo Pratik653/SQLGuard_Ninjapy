@@ -38,6 +38,15 @@ _TYPE_MAP = {
         "boolean": "BOOLEAN",
         "json": "JSONB",
     },
+    "mysql": {
+        "int": "BIGINT",
+        "text": "TEXT",
+        "numeric": "DECIMAL(14,2)",
+        "timestamp": "DATETIME(6)",
+        "date": "DATE",
+        "boolean": "BOOLEAN",
+        "json": "JSON",
+    },
 }
 
 ROW_COUNTS = {

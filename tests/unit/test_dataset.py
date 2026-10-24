@@ -10,7 +10,7 @@ def test_dataset_loads_and_has_stats():
     ds = load_dataset(DATASET_PATH)
     stats = ds.stats()
     assert stats["evaluations"] == len(ds.cases) > 0
-    assert set(stats["by_dialect"]) <= {"postgres", "sqlite"}
+    assert set(stats["by_dialect"]) <= {"postgres", "sqlite", "mysql"}
     assert len(ds.fingerprint) == 16
 
 

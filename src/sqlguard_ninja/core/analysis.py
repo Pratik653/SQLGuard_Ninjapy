@@ -27,7 +27,7 @@ from sqlguard_ninja.policy.model import Catalog
 # as findings, so the log line is noise.
 logging.getLogger("sqlglot").setLevel(logging.ERROR)
 
-SUPPORTED_DIALECTS = ("postgres", "sqlite")
+SUPPORTED_DIALECTS = ("postgres", "sqlite", "mysql")
 """Dialects covered by the test-suite and benchmark. Others parse but are experimental."""
 
 

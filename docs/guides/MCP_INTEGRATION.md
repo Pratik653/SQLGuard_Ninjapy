@@ -15,7 +15,7 @@ works out of the box: `--policy builtin:retail_saas --role support_analyst --ten
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| `validate_sql` | `sql`, optional `dialect` (`postgres` or `sqlite`) | `decision` (allow/review/deny), findings (rule id, action, message, remediation), `decision_id`, policy revision |
+| `validate_sql` | `sql`, optional `dialect` (`postgres`, `sqlite` or `mysql`) | `decision` (allow/review/deny), findings (rule id, action, message, remediation), `decision_id`, policy revision |
 | `explain_policy_decision` | `sql`, optional `dialect` | the decision plus per-finding lineage (base column, JSON path, labels) and how-to-fix hints |
 | `inspect_query_cost` | `sql`, optional `dialect` | static cost score, thresholds and factors (no execution plan, no database) |
 | `get_policy_capabilities` | — | the tables and columns this identity may use, their access mode (`allow`, `aggregate_only`, `review`), required tenant filter, limits, supported dialects |

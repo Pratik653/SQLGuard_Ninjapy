@@ -37,8 +37,9 @@ import psycopg
 from sqlguard_ninja.query_cost.postgres import PostgresPlanInspector
 
 inspector = PostgresPlanInspector(guard, lambda: psycopg.connect(READER_DSN))
-report = inspector.inspect(sql, role="support_analyst", context={"tenant_id": 1},
-                           params={"tenant_id": 1})
+report = inspector.inspect(
+    sql, role="support_analyst", context={"tenant_id": 1}, params={"tenant_id": 1}
+)
 report.total_cost, report.plan_rows, report.static.score, report.findings
 ```
 

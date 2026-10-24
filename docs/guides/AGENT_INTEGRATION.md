@@ -32,11 +32,13 @@ from sqlguard_ninja import Guard, Policy
 from sqlguard_ninja.integrations import RequestContext, SQLCheckpoint, JsonlAuditSink
 from sqlguard_ninja.integrations.executors import sqlite_executor
 
-checkpoint = SQLCheckpoint(Guard(Policy.from_file("policy.yaml")),
-                           audit_sink=JsonlAuditSink("audit.jsonl"))
-ctx = RequestContext(principal=user.id, role=user.role, tenant_id=user.tenant_id,
-                     trace_id=conversation_id)
-rows = checkpoint.execute(sql_from_llm, ctx, sqlite_executor(conn))   # raises SQLBlockedError
+checkpoint = SQLCheckpoint(
+    Guard(Policy.from_file("policy.yaml")), audit_sink=JsonlAuditSink("audit.jsonl")
+)
+ctx = RequestContext(
+    principal=user.id, role=user.role, tenant_id=user.tenant_id, trace_id=conversation_id
+)
+rows = checkpoint.execute(sql_from_llm, ctx, sqlite_executor(conn))  # raises SQLBlockedError
 ```
 
 `outcome.agent_message` is safe to return to the model. It explains the reason and never
@@ -47,8 +49,11 @@ contains approval tokens or internal detail.
 ```python
 from sqlguard_ninja.integrations.langchain import GuardedSQLTool
 
-tool = GuardedSQLTool(checkpoint=checkpoint, executor=sqlite_executor(conn),
-                      context_provider=lambda: current_request_context())
+tool = GuardedSQLTool(
+    checkpoint=checkpoint,
+    executor=sqlite_executor(conn),
+    context_provider=lambda: current_request_context(),
+)
 ```
 
 The tool's argument schema is `{"query": str}` with `extra="forbid"`. A model that tries to
@@ -60,12 +65,17 @@ as the tool result (`raise_on_block=True` raises instead). See
 
 ```python
 from sqlguard_ninja.integrations.langgraph import (
-    CONTEXT_KEY, make_guard_node, make_execute_node, route_after_guard)
+    CONTEXT_KEY,
+    make_guard_node,
+    make_execute_node,
+    route_after_guard,
+)
 
 g.add_node("guard", make_guard_node(checkpoint))
 g.add_node("execute", make_execute_node(checkpoint, executor))
-g.add_conditional_edges("guard", route_after_guard(3),
-                        {"execute": "execute", "revise": "generate", "end": END})
+g.add_conditional_edges(
+    "guard", route_after_guard(3), {"execute": "execute", "revise": "generate", "end": END}
+)
 graph.invoke(state, config={"configurable": {CONTEXT_KEY: request_context}})
 ```
 
@@ -82,6 +92,7 @@ shows the same tool with a real model. That example is optional and not run in t
 
 ```python
 from sqlguard_ninja.integrations.fastapi import create_router
+
 app.include_router(create_router(checkpoint, current_context_dependency, executor))
 ```
 

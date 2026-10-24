@@ -121,8 +121,8 @@ result = guard.validate(
     role="hr_analyst",
     dialect="postgres",
 )
-result.allowed      # True
-result.findings     # () - structured Finding objects with rule_id, action, message, remediation
+result.allowed  # True
+result.findings  # () - structured Finding objects with rule_id, action, message, remediation
 
 guard.validate("SELECT full_name, salary FROM employees", role="hr_analyst").explain()
 # DENY:
@@ -135,16 +135,21 @@ guard.validate("SELECT full_name, salary FROM employees", role="hr_analyst").exp
 ```python
 from sqlguard_ninja.integrations import RequestContext, SQLCheckpoint
 from sqlguard_ninja.integrations.langgraph import (
-    CONTEXT_KEY, make_execute_node, make_guard_node, route_after_guard)
+    CONTEXT_KEY,
+    make_execute_node,
+    make_guard_node,
+    route_after_guard,
+)
 
 checkpoint = SQLCheckpoint(guard, mode="block", max_denied_attempts=3)
 graph.add_node("guard", make_guard_node(checkpoint))
-graph.add_node("execute", make_execute_node(checkpoint, executor))   # re-validates
-graph.add_conditional_edges("guard", route_after_guard(3),
-                            {"execute": "execute", "revise": "generate", "end": END})
+graph.add_node("execute", make_execute_node(checkpoint, executor))  # re-validates
+graph.add_conditional_edges(
+    "guard", route_after_guard(3), {"execute": "execute", "revise": "generate", "end": END}
+)
 
 ctx = RequestContext(principal=user.id, role=user.role, tenant_id=user.tenant_id)
-app.invoke(state, config={"configurable": {CONTEXT_KEY: ctx}})       # nodes cannot alter config
+app.invoke(state, config={"configurable": {CONTEXT_KEY: ctx}})  # nodes cannot alter config
 ```
 
 More in [AGENT_INTEGRATION.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/AGENT_INTEGRATION.md): the LangChain tool (its
@@ -238,8 +243,10 @@ rolled-back transaction:
 
 ```python
 from sqlguard_ninja.query_cost.postgres import PostgresPlanInspector
+
 report = PostgresPlanInspector(guard, lambda: psycopg.connect(READER_DSN)).inspect(
-    sql, role="support_analyst", context={"tenant_id": 1})
+    sql, role="support_analyst", context={"tenant_id": 1}
+)
 report.total_cost, report.plan_rows, report.static.score, report.findings
 ```
 
@@ -254,16 +261,16 @@ sqlninja benchmark run --dataset builtin:v1 --adapter external:sql-guardrail
 sqlninja benchmark compare --baseline benchmarks/baselines/native.json --candidate results/latest.json
 ```
 
-Results for corpus v1.1.0 (551 cases, 1,044 evaluations; SQLGuard Ninja 0.2.0; Windows 11,
+Results for corpus v1.2.0 (577 cases, 1,070 evaluations; SQLGuard Ninja 0.5.0; Windows 11,
 Python 3.11). Intervals are 95% Wilson intervals. Details, CSV and raw files:
-[RESULTS_v1.1.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/benchmarks/RESULTS_v1.1.md).
+[RESULTS_v1.2.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/benchmarks/RESULTS_v1.2.md).
 
 | Validator | Recall (95% CI) | Precision | F1 | FPR (95% CI) | Recall / FPR within declared capability | p95 ms |
 |---|---:|---:|---:|---:|---:|---:|
-| SQLGuard Ninja 0.2.0 | 100.0% (99.4–100.0) | 100.0% | 1.000 | 0.0% (0.0–0.9) | 100.0% / 0.0% | 3.33 |
-| sql-guardrail 0.5.2 | 98.7% (97.4–99.3) | 85.1% | 0.914 | 24.1% (20.3–28.3) | 98.3% / 19.7% | 2.63 |
-| agent-sql-guard 0.2.0 | 67.3% (63.4–70.9) | 85.2% | 0.752 | 16.3% (13.1–20.0) | 89.4% / 17.7% | 1.87 |
-| krish2105/sqlguard 0.1.0 | 65.3% (61.4–69.0) | 89.6% | 0.755 | 10.5% (8.0–13.8) | 83.5% / 5.2% | 1.95 |
+| SQLGuard Ninja 0.5.0 | 100.0% (99.4–100.0) | 100.0% | 1.000 | 0.0% (0.0–0.9) | 100.0% / 0.0% | 3.36 |
+| sql-guardrail 0.5.2 | 98.2% (96.9–99.0) | 84.7% | 0.909 | 24.8% (21.1–29.0) | 98.3% / 19.7% | 1.84 |
+| agent-sql-guard 0.2.0 | 66.8% (63.0–70.4) | 85.1% | 0.748 | 16.3% (13.2–20.0) | 89.4% / 17.7% | 1.44 |
+| krish2105/sqlguard 0.1.0 | 64.8% (61.0–68.5) | 89.4% | 0.752 | 10.7% (8.2–14.0) | 83.5% / 5.2% | 1.42 |
 
 **All of these are internal results.** The corpus was written by this project, alongside the
 engine. The native 100% shows consistency with the documented semantics, not independent
@@ -330,8 +337,10 @@ writes, more tested dialects, and SARIF output. Details in [ROADMAP.md](https://
 ## Supported versions
 
 * Python 3.11, 3.12, 3.13 (CI matrix on Linux and Windows).
-* SQL dialects: **PostgreSQL** (tested against PostgreSQL 16) and **SQLite**. Other sqlglot
-  dialects parse but are experimental and untested.
+* SQL dialects: **PostgreSQL** (tested against PostgreSQL 16), **SQLite**, and **MySQL 8**
+  (tested against MySQL 8.4 in CI, within the documented scope: identifier case is not folded,
+  named placeholders only). SQL Server and Oracle are parser-level **experimental**; others are
+  untested. See the [compatibility matrix](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/DATABASE_COMPATIBILITY.md).
 
 ## Development
 
