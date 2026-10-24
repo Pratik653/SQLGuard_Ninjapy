@@ -5,15 +5,20 @@ _Updated 2026-10-24. On resume: read IMPLEMENTATION_STATUS.md, run
 
 ## Release
 
-v0.1.0 is released on GitHub and PyPI and verified (see RELEASE_CHECKLIST.md).
+v0.1.1 (latest) and v0.1.0 are published on GitHub and PyPI and verified (RELEASE_CHECKLIST.md).
+`main` is protected: every change goes through a pull request with the 11 required checks.
 
-## Post-release maintenance (next)
+## Maintainer actions
 
-1. ✅ 0.1.1: README links absolute (done on release/v0.1.1).
-2. Maintainer: enable "Block command line pushes that expose my email" (GitHub → Settings → Emails);
-   (branch protection and CODEOWNERS are configured in 0.1.1).
-3. Review Dependabot PRs; keep actions SHA-pinned.
-4. Delete the local `backup/pre-email-rewrite` branch once you no longer need the old history (it was never pushed).
+1. Enable "Block command line pushes that expose my email" (GitHub → Settings → Emails).
+2. Turn on "Require review from Code Owners" once a second maintainer exists.
+3. Delete the local `backup/pre-email-rewrite` branch when the old history is no longer needed (never pushed).
+
+## Tracked work
+
+All outstanding engineering work is filed as GitHub issues #5–#15 (benchmark coverage and
+external dataset, corpus diversity, lineage-aware privacy, tenant push-down, function presets,
+MySQL, upstream bug report, CI runner and Dependabot review, SARIF, governed writes).
 
 ## Engineering backlog
 

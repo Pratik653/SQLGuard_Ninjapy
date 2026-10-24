@@ -72,4 +72,4 @@ default merge), CST-012 (self-join cost relabelled to review, rationale in the c
   content. The rules are implemented. Their mechanics are unit-tested with fictitious
   function names (`tests/unit/test_function_policy_mechanics.py`), and the categories need
   maintainer-contributed cases.
-* Released as v0.1.0 on GitHub and PyPI (see RELEASE_CHECKLIST.md). README relative links do not resolve on the PyPI page; fix planned for 0.1.1.
+* Released v0.1.0 and v0.1.1 (latest) on GitHub and PyPI; README links fixed in 0.1.1 (see RELEASE_CHECKLIST.md). Outstanding work tracked in issues #5–#15.
