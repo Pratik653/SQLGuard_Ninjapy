@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import platform
 import subprocess
@@ -66,6 +67,7 @@ def run_benchmark(
             latency_ms=verdict.latency_ms,
             error=verdict.error,
             in_capability=caps is None or case.category in caps,
+            reasons=tuple(verdict.reasons),
         )
         outcomes.append(outcome)
         records.append(
@@ -74,6 +76,8 @@ def run_benchmark(
                 "category": case.category,
                 "dialect": case.dialect,
                 "provenance": case.provenance,
+                "tier": outcome.tier,
+                "basis": outcome.basis,
                 "classification": case.classification.value,
                 "reason": case.reason.value,
                 "expected": case.expected.value,
@@ -92,6 +96,7 @@ def run_benchmark(
             "name": dataset.manifest.name,
             "version": dataset.manifest.version,
             "fingerprint": dataset.fingerprint,
+            "files": dataset.file_hashes(),
             "cases_evaluated": len(selected),
         },
         "adapter": {
@@ -116,6 +121,36 @@ def write_result(result: dict[str, Any], path: str | Path) -> Path:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(result, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    return p
+
+
+CSV_FIELDS = (
+    "id",
+    "category",
+    "dialect",
+    "tier",
+    "provenance",
+    "classification",
+    "reason",
+    "expected",
+    "actual",
+    "kind",
+    "basis",
+    "latency_ms",
+    "in_capability",
+    "error",
+)
+
+
+def write_csv(result: dict[str, Any], path: str | Path) -> Path:
+    """Per-case results as CSV (one row per evaluation)."""
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=CSV_FIELDS, extrasaction="ignore")
+        writer.writeheader()
+        for record in result["cases"]:
+            writer.writerow(record)
     return p
 
 

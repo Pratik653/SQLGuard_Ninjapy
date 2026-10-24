@@ -146,6 +146,26 @@ class Dataset(BaseModel):
     root: Path
     policy: Policy
     cases: list[BenchmarkCase]
+    files: list[Path] = Field(default_factory=list)
+    policy_path: Path | None = None
+
+    def file_hashes(self) -> dict[str, str]:
+        """SHA-256 of the manifest, the policy and every case file, keyed by relative path."""
+        root = self.root.resolve()
+        paths = [root / "manifest.yaml", *self.files]
+        if self.policy_path is not None:
+            paths.append(self.policy_path)
+        out: dict[str, str] = {}
+        for path in paths:
+            resolved = path.resolve()
+            try:
+                key = resolved.relative_to(root).as_posix()
+            except ValueError:
+                key = "policy:" + resolved.name
+            # Hash normalised newlines so Windows and Linux checkouts agree.
+            data = resolved.read_bytes().replace(b"\r\n", b"\n")
+            out[key] = hashlib.sha256(data).hexdigest()
+        return dict(sorted(out.items()))
 
     @property
     def fingerprint(self) -> str:
@@ -163,6 +183,12 @@ class Dataset(BaseModel):
             "by_dialect": dict(Counter(c.dialect for c in self.cases)),
             "by_category": dict(sorted(Counter(c.category for c in self.cases).items())),
             "by_provenance": dict(Counter(c.provenance.split(":")[0] for c in self.cases)),
+            "by_tier": dict(
+                Counter(
+                    "independent" if c.provenance.startswith("external:") else "internal"
+                    for c in self.cases
+                )
+            ),
         }
 
     def filter(
@@ -241,13 +267,16 @@ def load_dataset(path: str | Path) -> Dataset:
     manifest = DatasetManifest.model_validate(
         yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     )
-    policy = Policy.from_file((root / manifest.policy).resolve())
+    policy_path = (root / manifest.policy).resolve()
+    policy = Policy.from_file(policy_path)
     cases: list[BenchmarkCase] = []
+    case_files: list[Path] = []
     for pattern in manifest.case_files:
         files = sorted(root.glob(pattern))
         if not files:
             raise DatasetError(f"case file pattern {pattern!r} matched nothing")
         for f in files:
+            case_files.append(f)
             cases.extend(load_case_file(f, manifest.default_context))
     ids = Counter(c.id for c in cases)
     dupes = [i for i, n in ids.items() if n > 1]
@@ -262,4 +291,11 @@ def load_dataset(path: str | Path) -> Dataset:
     for c in cases:
         if c.role is not None and c.role not in policy.roles:
             raise DatasetError(f"{c.id}: unknown role {c.role!r}")
-    return Dataset(manifest=manifest, root=root, policy=policy, cases=cases)
+    return Dataset(
+        manifest=manifest,
+        root=root,
+        policy=policy,
+        cases=cases,
+        files=case_files,
+        policy_path=policy_path,
+    )

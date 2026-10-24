@@ -286,3 +286,80 @@ def test_compare_flags_relabelled_cases():
     comp = compare(base, cand)
     assert comp.label_changes == ["a"] and not comp.passed
     assert compare(base, cand, Thresholds(allow_label_changes=True)).passed
+
+
+# ------------------------------------------------------------- 0.2: tiers, CIs, CSV, hashes
+def test_wilson_interval_properties():
+    from sqlguard_ninja.benchmarking.metrics import wilson_interval
+
+    assert wilson_interval(0, 0) is None
+    lo, hi = wilson_interval(50, 100)
+    assert lo < 0.5 < hi and round(lo, 2) == 0.40 and round(hi, 2) == 0.60
+    lo, hi = wilson_interval(10, 10)
+    assert hi == 1.0 and 0.65 < lo < 0.75  # perfect score still has a non-trivial lower bound
+
+
+def test_f1_and_ci_in_summary():
+    m = summarise(
+        [_o("deny", "deny"), _o("deny", "allow"), _o("allow", "deny"), _o("allow", "allow")]
+    )
+    assert m["f1"] == 0.5
+    assert m["confidence_95"]["method"] == "wilson"
+    assert m["confidence_95"]["recall"][0] < 0.5 < m["confidence_95"]["recall"][1]
+    assert m["throughput_per_s"] == 1000.0  # 4 evaluations x 1 ms
+
+
+def test_tier_and_basis():
+    from sqlguard_ninja.benchmarking.metrics import dataset_tier
+
+    assert dataset_tier("handwritten") == "internal"
+    assert dataset_tier("generated:tenant_matrix@1") == "internal"
+    assert dataset_tier("human-reviewed:panel@1") == "internal"
+    assert dataset_tier("external:acme-sql@1.0") == "independent"
+    base = dict(
+        id="x",
+        category="c",
+        dialect="postgres",
+        provenance="handwritten",
+        expected=Decision.DENY,
+        actual=Decision.DENY,
+        latency_ms=1.0,
+    )
+    assert CaseOutcome(**base, reasons=("parse.error",)).basis == "unsupported"
+    assert (
+        CaseOutcome(**base, reasons=("parse.error", "tenant.missing_predicate")).basis == "policy"
+    )
+    assert CaseOutcome(**{**base, "actual": Decision.ALLOW}).basis == "none"
+
+
+def test_result_has_hashes_tiers_and_csv(tmp_path):
+    from sqlguard_ninja.benchmarking.runner import write_csv
+
+    result = run_benchmark(DS, NativeAdapter(DS.policy), SMALL, warmup=0)
+    files = result["benchmark"]["files"]
+    assert "manifest.yaml" in files and any(k.startswith("policy:") for k in files)
+    assert all(len(h) == 64 for h in files.values())
+    assert set(result["metrics"]["by_tier"]) == {"internal"}
+    assert all(
+        r["tier"] == "internal" and r["basis"] in ("policy", "unsupported", "none")
+        for r in result["cases"]
+    )
+    path = write_csv(result, tmp_path / "r.csv")
+    lines = path.read_text(encoding="utf-8").splitlines()
+    assert lines[0].startswith("id,category,dialect,tier") and len(lines) == len(SMALL) + 1
+    assert "By dataset tier" in benchmark_report(result)
+
+
+def test_file_hashes_ignore_line_endings(tmp_path):
+    import shutil
+
+    from sqlguard_ninja.benchmarking.dataset import load_dataset as load
+
+    src = DATASET_PATH.parent.parent  # benchmarks/
+    dst = tmp_path / "benchmarks"
+    shutil.copytree(src / "datasets" / "v1", dst / "datasets" / "v1")
+    shutil.copytree(src / "policies", dst / "policies")
+    a = load(dst / "datasets" / "v1").file_hashes()
+    f = dst / "datasets" / "v1" / "manifest.yaml"
+    f.write_bytes(f.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    assert load(dst / "datasets" / "v1").file_hashes() == a

@@ -28,7 +28,7 @@ from sqlguard_ninja.benchmarking.adapters import (
 )
 from sqlguard_ninja.benchmarking.compare import compare
 from sqlguard_ninja.benchmarking.dataset import DatasetError, load_dataset
-from sqlguard_ninja.benchmarking.runner import load_result, run_benchmark, write_result
+from sqlguard_ninja.benchmarking.runner import load_result, run_benchmark, write_csv, write_result
 from sqlguard_ninja.cli.config import CISection, ProjectConfig
 from sqlguard_ninja.cli.templates import FILES
 from sqlguard_ninja.core.findings import Decision
@@ -233,12 +233,15 @@ def cmd_benchmark_run(args: argparse.Namespace) -> int:
     if report_path is not None:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(report + "\n", encoding="utf-8")
+    if args.csv:
+        write_csv(result, args.csv)
     if args.summary:
         _write_summary(report)
     m = result["metrics"]["overall"]
     _out(
         f"{adapter.name} {adapter.version}: {m['cases']} evaluations, recall "
-        f"{m['recall']}, precision {m['precision']}, FPR {m['false_positive_rate']}, "
+        f"{m['recall']}, precision {m['precision']}, F1 {m['f1']}, "
+        f"FPR {m['false_positive_rate']}, "
         f"p95 {m['latency_ms']['p95']} ms -> {output}"
     )
     return EXIT_OK
@@ -317,7 +320,11 @@ def cmd_dataset_stats(args: argparse.Namespace) -> int:
         ds = load_dataset(builtin.resolve(str(path), "dataset"))
     except (DatasetError, PolicyError, OSError) as exc:
         raise CLIError(str(exc)) from exc
-    _out(json.dumps({"fingerprint": ds.fingerprint, **ds.stats()}, indent=2))
+    _out(
+        json.dumps(
+            {"fingerprint": ds.fingerprint, **ds.stats(), "files": ds.file_hashes()}, indent=2
+        )
+    )
     return EXIT_OK
 
 
@@ -376,6 +383,7 @@ def build_parser() -> argparse.ArgumentParser:
     br.add_argument("--category")
     br.add_argument("--output")
     br.add_argument("--report")
+    br.add_argument("--csv", help="also write per-case results as CSV")
     br.add_argument("--summary", action="store_true", help="append to GITHUB_STEP_SUMMARY")
     br.set_defaults(func=cmd_benchmark_run)
 
