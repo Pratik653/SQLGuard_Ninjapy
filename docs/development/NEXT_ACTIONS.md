@@ -1,5 +1,7 @@
 # Next actions (development program)
 
-1. Merge the v0.2.0 PR after the required checks pass; tag v0.2.0; release; verify PyPI and a fresh install.
-2. Phase 2 (v0.3.0): policy-as-code (`extends` role inheritance, templates, `policy simulate/diff/explain`), decision IDs and policy version in audit events.
-3. Phase 3 (v0.3.0): MCP stdio server (validation-only tools), tested with a real MCP client.
+v0.2.0 is released (tag on 8b59a38; https://github.com/Pratik653/SQLGuard_Ninjapy/releases/tag/v0.2.0).
+
+1. Phase 2 (v0.3.0): policy-as-code (role `extends` inheritance, templates, `policy simulate`/`diff`/`explain`, conflict detection), decision ids and policy version in audit events.
+2. Phase 3 (v0.3.0): MCP stdio server with validation-only tools, tested with a real MCP client.
+3. Workstream 1 open items: an independent dataset (#6) and function/catalog cases (#5), both needing external contributors.

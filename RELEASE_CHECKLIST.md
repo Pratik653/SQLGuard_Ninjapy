@@ -54,3 +54,14 @@ Release commit: `f5ac314dd87bea3be138c0f5b942cbf2d84d9efa`. Later commits on `ma
 
 Note: the first fresh-install attempt saw only 0.1.0 through a stale CDN index entry seconds
 after publication; a retry minutes later in a new venv installed 0.1.1.
+
+# Release checklist — v0.2.0
+
+| Check | Result | Evidence |
+|---|---|---|
+| Local gate | ✅ | 1,738 passed, 94% coverage; ruff, mypy, corpus `--check`, build, `twine check --strict` |
+| PR #17 checks | ✅ | 12/12; regression gate used the `main` baseline: 4 approved relabels, 0 unapproved, 0 regressions |
+| CI on merged main | ✅ | run 40107938223 on 8b59a38 |
+| Tag and release | ✅ | annotated `v0.2.0` → 8b59a38a9142dbebd1bc0b2e51d2d540b6158934; https://github.com/Pratik653/SQLGuard_Ninjapy/releases/tag/v0.2.0 |
+| PyPI publish | ✅ | release.yml run 40108113801; both files served by the simple index with PEP 740 provenance; earlier versions unchanged |
+| Fresh install (Python 3.13) | ✅ | import from site-packages, CLI lineage/push-down decisions, bundled benchmark with CSV, tiers and hashes |

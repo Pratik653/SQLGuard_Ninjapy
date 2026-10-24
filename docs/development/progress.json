@@ -13,7 +13,8 @@
       ],
       "evidence": [
         "tiers, basis, F1, Wilson CIs, CSV, hashes: VERIFIED locally",
-        "no independent dataset yet (#6); function/catalog cases absent (#5)"
+        "no independent dataset yet (#6); function/catalog cases absent (#5)",
+        "v0.2.0 released: tiers/CIs/CSV/hashes; still no independent data"
       ],
       "blockers": [
         "external dataset needs licensed independent source (#6)"
@@ -22,14 +23,15 @@
     {
       "id": 2,
       "name": "Lineage-aware privacy",
-      "status": "VERIFIED",
+      "status": "RELEASED",
       "release": "v0.2.0",
       "issues": [
         8,
         9
       ],
       "evidence": [
-        "corpus 1.1.0 lineage cases + tests/unit/test_lineage.py; full gate 1,738 passed"
+        "corpus 1.1.0 lineage cases + tests/unit/test_lineage.py; full gate 1,738 passed",
+        "v0.2.0 on PyPI; fresh install verified"
       ],
       "blockers": []
     },
