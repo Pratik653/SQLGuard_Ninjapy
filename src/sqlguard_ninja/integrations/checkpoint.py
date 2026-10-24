@@ -16,17 +16,21 @@ to the SHA-256 of the exact SQL, the trace and the requesting principal, and can
 from __future__ import annotations
 
 import hashlib
+import hmac
 import threading
 import time
 import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 from sqlguard_ninja.core.findings import Decision, ValidationResult
 from sqlguard_ninja.core.guard import Guard
 from sqlguard_ninja.integrations.audit import AuditEvent, AuditSink, redact_sql
+
+if TYPE_CHECKING:
+    from sqlguard_ninja.observability import Telemetry
 
 T = TypeVar("T")
 
@@ -192,8 +196,16 @@ class SQLCheckpoint:
         dialect: str | None = None,
         log_redacted_sql: bool = True,
         rewrite_tenant_filters: bool = False,
+        telemetry: Telemetry | None = None,
+        principal_hmac_key: bytes | None = None,
     ) -> None:
+        self.telemetry = telemetry
+        """Optional tracing and metrics; the guard is instrumented automatically."""
+        if telemetry is not None:
+            guard = telemetry.instrument(guard)
         self.guard = guard
+        self.principal_hmac_key = principal_hmac_key
+        """If set, audit events carry an HMAC-SHA256 pseudonym instead of the principal."""
         self.mode = EnforcementMode(mode)
         self.approver: Approver = approver or DenyAllApprover()
         self.audit_sink = audit_sink
@@ -210,6 +222,21 @@ class SQLCheckpoint:
     def evaluate(
         self, sql: str, context: RequestContext, *, _rewritten: bool = False
     ) -> CheckpointOutcome:
+        if self.telemetry is None:
+            return self._evaluate(sql, context, _rewritten)
+        with self.telemetry.span("sqlguard.checkpoint") as span:
+            outcome = self._evaluate(sql, context, _rewritten)
+            if outcome.audit_event is not None:
+                self.telemetry.checkpoint(outcome.audit_event, span)
+        return outcome
+
+    def _principal(self, principal: str | None) -> str | None:
+        if principal is None or self.principal_hmac_key is None:
+            return principal
+        digest = hmac.new(self.principal_hmac_key, principal.encode(), hashlib.sha256)
+        return "hmac-sha256:" + digest.hexdigest()[:32]
+
+    def _evaluate(self, sql: str, context: RequestContext, _rewritten: bool) -> CheckpointOutcome:
         started = time.perf_counter()
         policy_ctx = context.policy_context(self.guard.policy.tenant.context_key)
         result = self.guard.validate(
@@ -258,7 +285,7 @@ class SQLCheckpoint:
         )
         event = AuditEvent(
             trace_id=context.trace_id,
-            principal=context.principal,
+            principal=self._principal(context.principal),
             role=result.role,
             tenant=None if context.tenant_id is None else str(context.tenant_id),
             mode=self.mode.value,
@@ -284,6 +311,7 @@ class SQLCheckpoint:
             if approval is None
             else {"approved": approval.approved, "approver": approval.approver},
             attempt=attempt,
+            rate_limited=locked and not authorized,
             elapsed_ms=(time.perf_counter() - started) * 1000,
         )
         if self.audit_sink is not None:

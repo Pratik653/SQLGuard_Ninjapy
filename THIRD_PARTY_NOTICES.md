@@ -1,7 +1,8 @@
 # Third-party notices
 
 SQLGuard Ninja is licensed under Apache-2.0. **It does not vendor or copy third-party source
-code.** The projects below are used as ordinary dependencies, installed by the package
+code.** The only third-party file in the repository is a test fixture, the SARIF schema
+(below). The projects below are used as ordinary dependencies, installed by the package
 manager under their own licences. Licences were read from installed package metadata on
 2026-10-24. Always check the version you install.
 
@@ -21,6 +22,10 @@ manager under their own licences. Licences were read from installed package meta
 | `langgraph` | langgraph | 1.2.17 | MIT |
 | `fastapi` | fastapi / starlette | 0.162.0 / 1.9.0 | MIT / BSD-3-Clause |
 | `postgres` | psycopg (+ psycopg-binary) | 3.3.6 | LGPL-3.0-only |
+| `mcp` | mcp (official MCP Python SDK) | 2.3.0 | MIT |
+| `mysql` | PyMySQL | 1.2.3 | MIT |
+| `otel` | opentelemetry-api | 1.45.1 | Apache-2.0 |
+| `prometheus` | prometheus-client | 0.26.0 | Apache-2.0 AND BSD-2-Clause |
 
 psycopg is LGPL-3.0. SQLGuard Ninja only imports it at runtime when the `postgres` extra is
 installed. It is not modified or bundled, which is compatible with distributing SQLGuard Ninja
@@ -32,6 +37,23 @@ pytest (MIT), pytest-cov (MIT), hypothesis (MPL-2.0), httpx (BSD-3-Clause), ruff
 mypy (MIT), build (MIT). `pgserver` is optionally used for local PostgreSQL tests. It is not a
 declared dependency, and its package metadata on PyPI does not declare a licence. It bundles
 PostgreSQL binaries (PostgreSQL License).
+
+Tests also use jsonschema (MIT) and opentelemetry-sdk (Apache-2.0).
+
+## Test fixture: SARIF 2.1.0 JSON schema
+
+`tests/data/sarif-schema-2.1.0.json` is the unmodified OASIS SARIF 2.1.0 (Errata 01) schema,
+downloaded from
+https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json
+(SHA-256 `c3b4bb2d6093897483348925aaa73af03b3e3f4bd4ca38cef26dcb4212a2682e`). It is used only to
+validate SARIF output in tests and is not part of the wheel.
+
+> Copyright © OASIS Open 2020. All Rights Reserved. This document and translations of it may be
+> copied and furnished to others, and derivative works that comment on or otherwise explain it
+> or assist in its implementation may be prepared, copied, published, and distributed, in whole
+> or in part, without restriction of any kind, provided that the above copyright notice and this
+> section are included on all such copies and derivative works. (OASIS IPR Policy notice; see
+> https://www.oasis-open.org/policies-guidelines/ipr/)
 
 ## External validators used for benchmarking only
 

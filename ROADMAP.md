@@ -19,7 +19,7 @@ Items are ordered by priority. Nothing here is promised by date.
 * Governed writes (`UPDATE`/`DELETE` with mandatory tenant predicates and row-limit checks).
 * Tested support for MySQL, Snowflake and BigQuery, each with dialect-specific corpus cases.
 * Policy generation from database catalogs, with labels proposed for human review.
-* SARIF output for code-scanning integrations.
+* ~~SARIF output for code-scanning integrations.~~ Shipped in 0.6.0 (`sqlninja scan --format sarif`).
 * PyPI release once the API is reviewed by early users.
 
 ## Upstream

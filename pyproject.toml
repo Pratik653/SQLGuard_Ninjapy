@@ -40,7 +40,10 @@ fastapi = ["fastapi>=0.110"]
 mcp = ["mcp>=2.3,<3"]
 postgres = ["psycopg[binary]>=3.1"]
 mysql = ["PyMySQL>=1.1"]
-all = ["sqlguard-ninja[langchain,langgraph,fastapi,postgres,mysql,mcp]"]
+# Observability (sqlguard_ninja.observability).
+otel = ["opentelemetry-api>=1.25"]
+prometheus = ["prometheus-client>=0.20"]
+all = ["sqlguard-ninja[langchain,langgraph,fastapi,postgres,mysql,mcp,otel,prometheus]"]
 dev = [
     "sqlguard-ninja[all]",
     "pytest>=8.0",
@@ -51,6 +54,8 @@ dev = [
     "mypy>=1.10",
     "types-PyYAML",
     "build>=1.2",
+    "jsonschema>=4.20",
+    "opentelemetry-sdk>=1.25",
 ]
 
 [project.scripts]
@@ -122,5 +127,5 @@ exclude = ["src/sqlguard_ninja/benchmarking/workers/"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["langgraph.*", "langchain_core.*", "psycopg.*", "pgserver.*", "mcp.*", "pymysql.*"]
+module = ["langgraph.*", "langchain_core.*", "psycopg.*", "pgserver.*", "mcp.*", "pymysql.*", "prometheus_client.*", "opentelemetry.*", "jsonschema.*"]
 ignore_missing_imports = true

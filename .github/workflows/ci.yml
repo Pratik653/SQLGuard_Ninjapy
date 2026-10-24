@@ -133,6 +133,33 @@ jobs:
       - if: always()
         run: docker compose -f docker/docker-compose.yml down -v
 
+  observability:
+    name: Observability stack and SARIF (synthetic telemetry)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[dev]"
+      - name: SARIF output validates against the OASIS SARIF 2.1.0 schema
+        run: |
+          sqlninja scan examples/sql --policy builtin:retail_saas --role support_analyst             --tenant 1 --format sarif --output sqlninja.sarif --fail-on never
+          python -c "import json, jsonschema; jsonschema.validate(json.load(open('sqlninja.sarif')), json.load(open('tests/data/sarif-schema-2.1.0.json'))); print('SARIF valid')"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sqlninja-sarif
+          path: sqlninja.sarif
+      - name: Start Prometheus, Grafana and the synthetic traffic generator
+        run: docker compose -f examples/observability/docker-compose.yml up -d --wait
+      - run: python examples/observability/smoke_check.py
+      - if: failure()
+        run: docker compose -f examples/observability/docker-compose.yml logs --tail 80
+      - if: always()
+        run: docker compose -f examples/observability/docker-compose.yml down -v
+
   sql-security-gate:
     name: SQL security regression gate (reusable action)
     runs-on: ubuntu-latest

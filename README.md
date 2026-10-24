@@ -226,6 +226,20 @@ The four tools are `validate_sql`, `explain_policy_decision`, `inspect_query_cos
 to a database, and it exposes no execution tool. Tested with the official MCP Python SDK
 client over stdio. See [MCP_INTEGRATION.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/MCP_INTEGRATION.md).
 
+## Observability and SARIF
+
+```bash
+python -m pip install "sqlguard-ninja[otel,prometheus]"
+sqlninja scan sql/ --policy policy.yaml --role reporting --tenant 1 --format sarif --output sqlninja.sarif
+```
+
+`Telemetry(tracer=..., metrics=GuardMetrics())` adds OpenTelemetry spans and Prometheus metrics
+to the checkpoint: decisions, findings by rule, latency, errors, resource-limit rejections and
+checkpoint outcomes. By default no signal contains SQL text, literals, request-context values,
+tenant ids or principals, and tests check this with canary values. A Grafana dashboard
+(`deploy/grafana/`) and a synthetic-traffic Prometheus/Grafana stack are included. SARIF output
+validates against the OASIS 2.1.0 schema. See [OBSERVABILITY.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/OBSERVABILITY.md).
+
 ## Query cost analysis
 
 Every validation includes an explainable static score that uses the catalog's
@@ -307,9 +321,9 @@ the [benchmark bias review](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/m
 
 ## Roadmap
 
-Next: restricted-function and system-catalog benchmark cases, an independent held-out
-corpus, lineage-aware aggregate checks, and tenant predicate push-down. Later: governed
-writes, more tested dialects, and SARIF output. Details in [ROADMAP.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/ROADMAP.md).
+Next: restricted-function and system-catalog benchmark cases (issue #5), an independent
+held-out corpus (issue #6), an interactive demo and a hardened deployment reference. Later:
+governed writes, and database-verified SQL Server and Oracle support. Details in [ROADMAP.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/ROADMAP.md).
 
 ## Links
 
@@ -327,6 +341,8 @@ writes, more tested dialects, and SARIF output. Details in [ROADMAP.md](https://
 * [Agent integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/AGENT_INTEGRATION.md)
 * [Query cost](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/QUERY_COST.md)
 * [CI integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/CI_INTEGRATION.md)
+* [Observability and SARIF](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/OBSERVABILITY.md)
+* [Database compatibility](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/DATABASE_COMPATIBILITY.md)
 * [Benchmark methodology](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/BENCHMARK_METHODOLOGY.md)
 * [Threat model](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/security/THREAT_MODEL.md)
 * [Limits of static SQL analysis and dialect support](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/security/STATIC_ANALYSIS_LIMITS.md)

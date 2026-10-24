@@ -3,6 +3,29 @@
 All notable changes are documented here. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, minor versions may change the API.
 
+## [0.6.0] — 2026-10-24
+
+### Added
+* **Observability** (`sqlguard_ninja.observability`, extras `[otel]` and `[prometheus]`):
+  * `Telemetry` and `InstrumentedGuard` emit OpenTelemetry spans `sqlguard.checkpoint` and
+    `sqlguard.validate`.
+  * `GuardMetrics` exports Prometheus counters and histograms for decisions, findings,
+    latency, errors, resource-limit rejections, checkpoint outcomes and policy identity.
+  * `SQLCheckpoint(telemetry=...)` instruments its guard automatically.
+* **SARIF 2.1.0**: `sqlninja scan PATH... --format sarif|json|text --fail-on deny|review|never`.
+  It validates every statement in SQL files, with stable fingerprints. Tests and CI validate the
+  output against the OASIS schema.
+* **Grafana dashboard** `deploy/grafana/sqlguard-ninja.json`, and a Prometheus + Grafana +
+  synthetic-traffic stack (`examples/observability/`). A new CI job runs that stack.
+* Audit events gain `schema_version` and `rate_limited`. New
+  `SQLCheckpoint(principal_hmac_key=...)` option to pseudonymise principals.
+
+### Security
+* `redact_sql` now redacts hex, bit, byte (`E''`), dollar-quoted, Unicode (`U&''`) and
+  national (`N''`) strings and whole `INTERVAL` expressions. Previously these could reach
+  `sql_redacted` in audit logs. Comments are dropped, and if any literal token survives,
+  redacted SQL is withheld. See threat model T19.
+
 ## [0.5.0] — 2026-10-24
 
 ### Added

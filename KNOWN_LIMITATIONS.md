@@ -38,6 +38,16 @@ security, statement timeouts, resource limits or authentication.
 * The bundled executors are minimal; production deployments should use their own pooled,
   least-privilege connections.
 
+## Observability
+* Telemetry covers the guard and the checkpoint. Spans and metrics from custom rules are the
+  rule author's responsibility, and their exception *types* are recorded.
+* `sql_redacted` is withheld (`null`) whenever redaction cannot be proven complete, so some
+  audit events have no redacted SQL.
+* Audit events contain the principal and tenant by design. `sql_sha256` of a short query with
+  a guessable secret can be brute-forced, so treat audit logs as sensitive.
+* `sqlninja scan` splits files on top-level semicolons. Procedural blocks, client meta-commands
+  (`\i`, `GO`) and templated SQL are not understood and are reported as findings.
+
 ## Query cost
 * The static score uses declared `estimated_rows`; the planner uses real statistics. They
   can disagree, and neither predicts runtime.

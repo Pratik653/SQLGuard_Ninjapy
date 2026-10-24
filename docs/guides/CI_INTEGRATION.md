@@ -11,6 +11,28 @@ git add benchmarks/baseline.json  # baselines change only through reviewed commi
 
 `sqlninja benchmark baseline` refuses to run when `CI` is set. CI never updates baselines.
 
+## SARIF and GitHub code scanning
+
+`sqlninja scan` writes SARIF 2.1.0. Upload it with GitHub's own action, pinned to a commit SHA
+you have reviewed. Uploading needs `security-events: write`, and code scanning must be available
+for the repository.
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+steps:
+  - uses: actions/checkout@<sha>
+  - run: pip install sqlguard-ninja
+  - run: sqlninja scan sql/ --policy policy.yaml --role reporting --tenant 1 --format sarif --output sqlninja.sarif --fail-on never
+  - uses: github/codeql-action/upload-sarif@<sha>
+    with:
+      sarif_file: sqlninja.sarif
+```
+
+Results are fingerprinted per file, rule and literal-insensitive query, so changing only a
+literal does not open a new alert. The log contains rule messages but no SQL snippet.
+
 ## GitHub Action
 
 See [`examples/github-actions/sql-security.yml`](../../examples/github-actions/sql-security.yml).

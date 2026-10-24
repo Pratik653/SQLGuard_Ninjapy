@@ -3,6 +3,7 @@
 Exit codes:
 
 * ``validate``: 0 allow, 1 deny, 3 review, 2 usage or configuration error.
+* ``scan``: 0 when no finding reaches ``--fail-on``, 1 otherwise, 2 usage error.
 * ``benchmark compare`` / ``policy check``: 0 pass, 1 fail, 2 usage or configuration error.
 """
 
@@ -148,6 +149,84 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return {Decision.ALLOW: EXIT_OK, Decision.DENY: EXIT_FAIL, Decision.REVIEW: EXIT_REVIEW}[
         result.decision
     ]
+
+
+_RANK = {Decision.ALLOW: 0, Decision.REVIEW: 1, Decision.DENY: 2}
+
+
+def _scan_files(paths: Sequence[str], pattern: str) -> list[Path]:
+    files: list[Path] = []
+    for p in map(Path, paths):
+        if p.is_dir():
+            files.extend(sorted(x for x in p.rglob(pattern) if x.is_file()))
+        elif p.is_file():
+            files.append(p)
+        else:
+            raise CLIError(f"no such file or directory: {p}")
+    return files
+
+
+def cmd_scan(args: argparse.Namespace) -> int:
+    from sqlguard_ninja.observability.telemetry import query_fingerprint  # noqa: PLC0415
+    from sqlguard_ninja.reporting.sarif import (  # noqa: PLC0415
+        ScanResult,
+        relative_uri,
+        split_statements,
+        to_sarif,
+    )
+
+    cfg, base = _load_config(args.config)
+    policy = _load_policy(args.policy or _resolve(base, cfg.policy))
+    dialect = (args.dialect or policy.dialect).lower()
+    context: dict[str, Any] = {}
+    if args.tenant is not None:
+        context[policy.tenant.context_key] = args.tenant
+    guard = Guard(policy)
+    root = Path(args.root or ".")
+    files = _scan_files(args.paths, args.pattern)
+    results: list[ScanResult] = []
+    for path in files:
+        uri = relative_uri(path, root)
+        text = path.read_text(encoding="utf-8")
+        for st in split_statements(text, dialect):
+            r = guard.validate(st.sql, role=args.role, dialect=dialect, context=context)
+            results.append(ScanResult(uri, st, r, query_fingerprint(st.sql, dialect)))
+    uris = [relative_uri(p, root) for p in files]
+    if args.format == "sarif":
+        payload = json.dumps(to_sarif(results, policy, uris), indent=2)
+    elif args.format == "json":
+        payload = json.dumps(
+            [
+                {
+                    "uri": s.uri,
+                    "line": s.statement.start_line,
+                    "decision": s.result.decision.value,
+                    "decision_id": s.result.decision_id,
+                    "findings": [
+                        {"rule_id": f.rule_id, "action": f.action.value, "message": f.message}
+                        for f in s.result.findings
+                    ],
+                }
+                for s in results
+            ],
+            indent=2,
+        )
+    else:
+        lines = [
+            f"{s.uri}:{s.statement.start_line}: {s.result.decision.value.upper()}"
+            + "".join(f"\n  [{f.action.value}] {f.rule_id}: {f.message}" for f in s.result.findings)
+            for s in results
+        ]
+        payload = "\n".join(lines) or "no SQL statements found"
+    if args.output:
+        Path(args.output).write_text(payload + "\n", encoding="utf-8")
+    else:
+        _out(payload)
+    if args.fail_on == "never":
+        return EXIT_OK
+    threshold = _RANK[Decision(args.fail_on)]
+    worst = max((_RANK[s.result.decision] for s in results), default=0)
+    return EXIT_FAIL if worst >= threshold else EXIT_OK
 
 
 def cmd_policy_check(args: argparse.Namespace) -> int:
@@ -485,6 +564,20 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--format", choices=["text", "json"], default="text")
     v.add_argument("--verbose", "-v", action="store_true", help="include internal detail")
     v.set_defaults(func=cmd_validate)
+
+    sc = sub.add_parser("scan", help="validate every statement in SQL files (text, JSON, SARIF)")
+    common(sc)
+    sc.add_argument("paths", nargs="+", help="files or directories")
+    sc.add_argument("--policy")
+    sc.add_argument("--role")
+    sc.add_argument("--dialect")
+    sc.add_argument("--tenant", help="trusted tenant id for tenant-filter checks")
+    sc.add_argument("--pattern", default="*.sql", help="file glob inside directories")
+    sc.add_argument("--root", help="base directory for SARIF URIs (default: current directory)")
+    sc.add_argument("--format", choices=["text", "json", "sarif"], default="text")
+    sc.add_argument("--output", help="write to this file instead of stdout")
+    sc.add_argument("--fail-on", choices=["deny", "review", "never"], default="deny")
+    sc.set_defaults(func=cmd_scan)
 
     i = sub.add_parser("init", help="write a starter sqlninja.yaml, policy and test cases")
     i.add_argument("directory", nargs="?", default=".")

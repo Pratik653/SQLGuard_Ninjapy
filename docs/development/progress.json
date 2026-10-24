@@ -76,12 +76,14 @@
     {
       "id": 6,
       "name": "Observability and SARIF",
-      "status": "NOT_STARTED",
-      "release": "v0.4.0",
+      "status": "VERIFIED",
+      "release": "v0.6.0",
       "issues": [
         14
       ],
-      "evidence": [],
+      "evidence": [
+        "OTel/Prometheus/SARIF/Grafana + canary privacy tests; 1,916 local tests; CI pending"
+      ],
       "blockers": []
     },
     {
