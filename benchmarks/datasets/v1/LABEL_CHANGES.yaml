@@ -1,0 +1,22 @@
+# Reviewed changes to expected outcomes of existing benchmark cases.
+#
+# The CI gate fails when a case's expected label changes, unless the change is listed here.
+# This file is protected by CODEOWNERS: adding an entry is the explicit, reviewable approval.
+# Never relabel a case to make an engine regression pass.
+changes:
+  - id: PRV-026
+    from: deny
+    to: allow
+    corpus_version: "1.1.0"
+    issue: https://github.com/Pratik653/SQLGuard_Ninjapy/issues/8
+    rationale: >-
+      Semantics change to lineage-aware aggregate-only checks. The raw salary projection in the
+      CTE reaches only a statistical aggregate (AVG), so only a statistic is revealed.
+  - id: TEN-021
+    from: deny
+    to: allow
+    corpus_version: "1.1.0"
+    issue: https://github.com/Pratik653/SQLGuard_Ninjapy/issues/9
+    rationale: >-
+      Semantics change to tenant push-down. The CTE projects tenant_id unmodified, without
+      aggregation, windows or limits, and every consumer pins it to the caller's tenant.

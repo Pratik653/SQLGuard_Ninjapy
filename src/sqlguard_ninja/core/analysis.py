@@ -13,6 +13,7 @@ import logging
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 import sqlglot
 from sqlglot import exp
@@ -168,6 +169,8 @@ class ColumnRef:
     whole_row: bool = False
     """True for ``SELECT t`` (entire row) or an expanded ``*``."""
     from_star: bool = False
+    node: Any = field(default=None, compare=False, repr=False)
+    """The sqlglot Column node (for lineage); not part of equality."""
 
 
 @dataclass(frozen=True)
@@ -190,6 +193,8 @@ class ScopeFacts:
     has_limit: bool = False
     limit_unparseable: bool = False
     depth: int = 0
+    scope: Any = field(default=None, compare=False, repr=False)
+    """The sqlglot Scope object (for lineage)."""
 
 
 @dataclass
@@ -391,7 +396,9 @@ def _collect_scopes(result: QueryAnalysis, qualified: exp.Expr, catalog: Catalog
 
     for scope in scopes:
         sid = scope_ids[id(scope)]
-        facts = ScopeFacts(scope_id=sid, expression=scope.expression, depth=depth_of(scope))
+        facts = ScopeFacts(
+            scope_id=sid, expression=scope.expression, depth=depth_of(scope), scope=scope
+        )
         result.max_depth = max(result.max_depth, facts.depth)
         if isinstance(scope.expression, (exp.Select, exp.SetOperation)):
             facts.has_limit, facts.limit, facts.limit_unparseable = _limit_value(scope.expression)
@@ -561,6 +568,7 @@ def _record_column(
             aggregate=_aggregate_of(column, scope.expression),
             scope_id=facts.scope_id,
             json_path=_json_path(column),
+            node=column,
         )
     )
 

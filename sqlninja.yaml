@@ -13,3 +13,4 @@ ci:
   max_new_errors: 0
   min_recall: 0.95
   max_false_positive_rate: 0.05
+  approved_label_changes: benchmarks/datasets/v1/LABEL_CHANGES.yaml

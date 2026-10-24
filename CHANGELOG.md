@@ -3,6 +3,30 @@
 All notable changes are documented here. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, minor versions may change the API.
 
+## [0.2.0] — 2026-10-24
+
+### Added
+* **Lineage-aware privacy** (`core/lineage.py`). An `aggregate_only` column projected raw in a
+  CTE or derived table is accepted only when every downstream consumer aggregates it
+  statistically. Whole-row use, filters, ordering, windows, MIN/MAX and a raw use by any
+  consumer stay denied (issue #8).
+* **Tenant push-down.** An outer tenant pin on an unmodified projection of the tenant column
+  satisfies the inner read when the inner scope has no aggregation, window, LIMIT, OFFSET or
+  FETCH and every consumer pins it, recursively (issue #9).
+* The small-cohort check follows identifiers through CTEs and derived tables, so the lineage
+  relaxation cannot bypass it (found by new boundary case LIN-012).
+* Privacy findings carry structured lineage metadata (base column, JSON path, scope, labels).
+* Benchmark: `internal` / `independent` dataset tiers, flag basis (policy vs unsupported SQL),
+  F1, 95% Wilson intervals, throughput, CSV output (`--csv`), per-file SHA-256 dataset hashes
+  in results and `sqlninja dataset stats`.
+* Approved-relabel workflow: `LABEL_CHANGES.yaml` (CODEOWNERS-protected) lists reviewed label
+  changes; `benchmark compare --approved-label-changes` / `ci.approved_label_changes`.
+* Corpus 1.1.0: 21 lineage boundary cases; 2 approved relabels (PRV-026, TEN-021).
+
+### Changed
+* Decisions changed for exactly two corpus cases (PRV-026, TEN-021: deny → allow); all other
+  1,042 evaluations are unchanged.
+
 ## [0.1.1] — 2026-10-24
 
 Documentation and governance patch. No changes to policy decisions.

@@ -31,6 +31,8 @@ class CISection(_M):
     min_recall: float | None = None
     max_false_positive_rate: float | None = None
     max_p95_latency_increase_pct: float | None = None
+    approved_label_changes: str | None = None
+    """Path to a LABEL_CHANGES.yaml listing reviewed relabels (CODEOWNERS-protected)."""
 
     def thresholds(self, allow_benchmark_change: bool = False) -> Thresholds:
         return Thresholds(

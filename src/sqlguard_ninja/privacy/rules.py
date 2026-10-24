@@ -10,8 +10,15 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from sqlguard_ninja.core.analysis import AggregateKind, Clause, ColumnRef
+from sqlguard_ninja.core.analysis import (
+    AggregateKind,
+    Clause,
+    ColumnRef,
+    _aggregate_of,
+    _clause_of,
+)
 from sqlguard_ninja.core.findings import Action, Category, Finding, Severity
+from sqlguard_ninja.core.lineage import aggregated_downstream, derived_references
 from sqlguard_ninja.core.rules.base import RuleContext
 from sqlguard_ninja.policy.model import Access, ColumnDef, Disclosure, Policy, Role, Sensitivity
 
@@ -151,7 +158,18 @@ class PrivacyPolicyRule:
         )
         if policy.disclosure == Disclosure.GENERIC:
             cls_txt = "classified data"
-        meta = {"source": source, "clause": ref.clause.value, "aggregate": ref.aggregate.value}
+        meta = {
+            "source": source,
+            "clause": ref.clause.value,
+            "aggregate": ref.aggregate.value,
+            # Structured lineage for explanations (kept in metadata, not in agent messages).
+            "lineage": {
+                "base_column": f"{ref.table}.{ref.column}",
+                "json_path": list(ref.json_path) if ref.json_path else None,
+                "scope_id": ref.scope_id,
+                "labels": sorted(labels),
+            },
+        }
 
         if access is Access.DENY:
             return Finding(
@@ -170,6 +188,8 @@ class PrivacyPolicyRule:
             )
         if access is Access.AGGREGATE_ONLY:
             if ref.aggregate is AggregateKind.STATISTICAL:
+                return None
+            if self._aggregated_via_lineage(ctx, ref):
                 return None
             where = (
                 "in a filter, grouping or ordering"
@@ -207,6 +227,16 @@ class PrivacyPolicyRule:
             )
         return None
 
+    @staticmethod
+    def _aggregated_via_lineage(ctx: RuleContext, ref: ColumnRef) -> bool:
+        """A raw projection in a CTE or derived table that is only aggregated downstream."""
+        if ref.aggregate is not AggregateKind.NONE or ref.clause is not Clause.SELECT:
+            return False
+        if ref.node is None or ref.whole_row:
+            return False
+        facts = next((s for s in ctx.analysis.scopes if s.scope_id == ref.scope_id), None)
+        return facts is not None and aggregated_downstream(ctx.analysis, facts, ref.node)
+
     def _allowed_alternative(self, ctx: RuleContext, ref: ColumnRef) -> str | None:
         tdef = ctx.policy.catalog.tables[ref.table]
         cdef = tdef.columns[ref.column]
@@ -226,17 +256,26 @@ class PrivacyPolicyRule:
         return grant.columns == "*" or column in grant.columns
 
     def _small_cohort(self, ctx: RuleContext) -> Iterator[Finding]:
-        """Aggregates over a group filtered or grouped by an identifier reveal single values."""
+        """Aggregates over a group filtered or grouped by an identifier reveal single values.
+
+        Identifiers are followed through CTEs and derived tables, so lineage-based relaxation of
+        aggregate-only checks cannot bypass this rule (regression case LIN-012).
+        """
         catalog = ctx.policy.catalog
-        for ref in ctx.analysis.columns:
-            if ref.clause not in (Clause.WHERE, Clause.GROUP, Clause.JOIN, Clause.HAVING):
+        clauses = (Clause.WHERE, Clause.GROUP, Clause.HAVING)  # join keys are expected ids
+        candidates: list[tuple[str, str, Clause]] = [
+            (ref.table, ref.column, ref.clause)
+            for ref in ctx.analysis.columns
+            if ref.clause in clauses and ref.aggregate is AggregateKind.NONE
+        ]
+        for facts, node, (table, col) in derived_references(ctx.analysis, clauses):
+            if _aggregate_of(node, facts.expression) is AggregateKind.NONE:
+                candidates.append((table, col, _clause_of(node, facts.expression)))
+        for table, column, clause in candidates:
+            tdef = catalog.tables.get(table)
+            if tdef is None or column not in tdef.columns:
                 continue
-            if ref.clause is Clause.JOIN:
-                continue  # join keys are expected to be identifiers
-            tdef = catalog.tables.get(ref.table)
-            if tdef is None or ref.column not in tdef.columns:
-                continue
-            if tdef.columns[ref.column].identifying and ref.aggregate is AggregateKind.NONE:
+            if tdef.columns[column].identifying:
                 yield Finding(
                     rule_id="privacy.small_cohort",
                     category=Category.PRIVACY,
@@ -244,9 +283,9 @@ class PrivacyPolicyRule:
                     action=ctx.policy.defaults.small_cohort_action,
                     message="An aggregate of restricted data is filtered or grouped by an "
                     "identifying column, which can reveal individual values.",
-                    detail=f"identifying column {ref.table}.{ref.column} in {ref.clause.value}",
-                    table=ref.table,
-                    column=ref.column,
+                    detail=f"identifying column {table}.{column} in {clause.value}",
+                    table=table,
+                    column=column,
                     remediation="Group by non-identifying attributes and ensure groups are "
                     "large enough (k-anonymity is not checked statically).",
                 )

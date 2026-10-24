@@ -14,7 +14,7 @@ the *authenticated* caller: which tables and columns a role may use, which data 
 appear only in aggregates or only after human approval, and which tenant the caller belongs
 to. It records an audit trail and gives the agent an explanation it can act on.
 
-It ships with a labelled benchmark corpus (530 cases, 1,002 dialect evaluations) and a
+It ships with a labelled benchmark corpus (551 cases, 1,044 dialect evaluations) and a
 regression gate for CI. The same benchmark harness can evaluate other open-source guards
 side by side.
 
@@ -27,9 +27,9 @@ side by side.
 | Workstream | What you get | Status |
 |---|---|---|
 | **Policy engine** | Read-only enforcement, table/column grants, tenant isolation, function and catalog rules, structural limits. Built on [sqlglot](https://github.com/tobymao/sqlglot). Fails closed when analysis is incomplete. | PostgreSQL + SQLite tested |
-| **Privacy pack** | Explicit classification labels, `deny` / `aggregate_only` / `review` per role, JSON-path labels, small-cohort review, minimisation hints and alternatives | implemented |
+| **Privacy pack** | Explicit classification labels, `deny` / `aggregate_only` / `review` per role, JSON-path labels, lineage through CTEs and derived tables, small-cohort review, minimisation hints and alternatives | implemented |
 | **Agent integrations** | `SQLCheckpoint` with block / review / audit modes, hash-bound single-use approvals, retry lock-out, redacted audit events. LangChain tool, LangGraph nodes, FastAPI router | implemented |
-| **Benchmark engine** | Versioned corpus, metrics (recall, precision, FPR, FNR, exact match, per category/dialect, latency percentiles), adapters for native, callable and isolated external validators, JSON and Markdown reports | implemented |
+| **Benchmark engine** | Versioned corpus with per-file SHA-256 hashes, internal and independent tiers, metrics (recall, precision, F1, FPR, FNR with 95% Wilson intervals, exact match, throughput, latency percentiles, per category/dialect/tier), adapters for native, callable and isolated external validators, JSON, CSV and Markdown reports | implemented |
 | **Query cost** | Explainable static score; optional PostgreSQL `EXPLAIN (FORMAT JSON)` inspection, gated and read-only | implemented |
 | **CI** | Composite GitHub Action and CLI gate: security, usability, label-change and error regressions against an approved baseline | implemented |
 
@@ -223,22 +223,24 @@ sqlninja benchmark run --dataset builtin:v1 --adapter external:sql-guardrail
 sqlninja benchmark compare --baseline benchmarks/baselines/native.json --candidate results/latest.json
 ```
 
-Results for corpus v1.0.0 (Windows 11, Python 3.11, 1,002 evaluations). Details and raw files:
-[RESULTS_v1.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/benchmarks/RESULTS_v1.md).
+Results for corpus v1.1.0 (551 cases, 1,044 evaluations; SQLGuard Ninja 0.2.0; Windows 11,
+Python 3.11). Intervals are 95% Wilson intervals. Details, CSV and raw files:
+[RESULTS_v1.1.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/benchmarks/RESULTS_v1.1.md).
 
-| Validator | Recall | Precision | FPR | Recall / FPR within declared capability | p95 ms |
-|---|---:|---:|---:|---:|---:|
-| SQLGuard Ninja 0.1.0 | 100.0% | 100.0% | 0.0% | 100.0% / 0.0% | 2.15 |
-| sql-guardrail 0.5.2 | 98.6% | 86.6% | 21.2% | 98.3% / 19.3% | 1.72 |
-| agent-sql-guard 0.2.0 | 67.9% | 86.6% | 14.5% | 89.5% / 17.2% | 1.26 |
-| krish2105/sqlguard 0.1.0 | 65.8% | 91.4% | 8.6% | 83.5% / 5.2% | 1.22 |
+| Validator | Recall (95% CI) | Precision | F1 | FPR (95% CI) | Recall / FPR within declared capability | p95 ms |
+|---|---:|---:|---:|---:|---:|---:|
+| SQLGuard Ninja 0.2.0 | 100.0% (99.4–100.0) | 100.0% | 1.000 | 0.0% (0.0–0.9) | 100.0% / 0.0% | 3.33 |
+| sql-guardrail 0.5.2 | 98.7% (97.4–99.3) | 85.1% | 0.914 | 24.1% (20.3–28.3) | 98.3% / 19.7% | 2.63 |
+| agent-sql-guard 0.2.0 | 67.3% (63.4–70.9) | 85.2% | 0.752 | 16.3% (13.1–20.0) | 89.4% / 17.7% | 1.87 |
+| krish2105/sqlguard 0.1.0 | 65.3% (61.4–69.0) | 89.6% | 0.755 | 10.5% (8.0–13.8) | 83.5% / 5.2% | 1.95 |
 
-**Read the native row with care.** The corpus and the engine were developed together, and
-every disagreement was triaged by fixing the engine or correcting a label (both are logged).
-100% shows consistency with the documented semantics, not independent detection quality. The
-other tools have smaller policy models (no roles, labels, aggregate-only access or review), so
-the "within capability" column is the fairer comparison. Methodology and threats to validity:
-[BENCHMARK_METHODOLOGY.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/BENCHMARK_METHODOLOGY.md).
+**All of these are internal results.** The corpus was written by this project, alongside the
+engine. The native 100% shows consistency with the documented semantics, not independent
+detection quality. No independently sourced dataset exists yet ([intake rules](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/benchmarks/datasets/external/README.md),
+issue #6). Reports keep `internal` and `independent` tiers separate, and they also separate
+policy denials from unsupported-SQL denials. Methodology and bias review:
+[BENCHMARK_METHODOLOGY.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/BENCHMARK_METHODOLOGY.md),
+[BENCHMARK_BIAS_REVIEW.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/BENCHMARK_BIAS_REVIEW.md).
 
 ## How it relates to existing tools
 

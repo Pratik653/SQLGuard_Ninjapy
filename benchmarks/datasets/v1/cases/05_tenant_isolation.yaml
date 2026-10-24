@@ -85,9 +85,12 @@ cases:
     explanation: Both arms pinned.
   - id: TEN-021
     sql: WITH x AS (SELECT o.id, o.tenant_id FROM orders o) SELECT x.id FROM x WHERE x.tenant_id = 1
+    expected: allow
+    reason: none
     explanation: >-
-      Policy semantics require the pin in the scope that reads the table. Semantically
-      equivalent outer filtering is not accepted (documented false-positive class).
+      Tenant push-down (since corpus 1.1.0): the CTE projects tenant_id unmodified without
+      aggregation or limits, and its only consumer pins it to the caller's tenant. Relabelled
+      from deny; see benchmarks/datasets/v1/LABEL_CHANGES.yaml.
   - id: TEN-022
     sql: WITH x AS (SELECT o.id FROM orders o WHERE o.tenant_id = 1) SELECT x.id FROM x
     expected: allow

@@ -1,0 +1,150 @@
+# Lineage boundaries (corpus 1.1.0). Each relaxed case has a nearby case that must stay
+# denied, so the lineage relaxation cannot quietly widen.
+defaults:
+  dialects: [postgres, sqlite]
+cases:
+  # ---- aggregate-only through CTEs and derived tables (role hr_analyst: salary is aggregate_only)
+  - id: LIN-001
+    role: hr_analyst
+    sql: WITH s AS (SELECT e.department, e.salary FROM employees e) SELECT s.department, SUM(s.salary) FROM s GROUP BY s.department
+    category: privacy_lineage
+    expected: allow
+    explanation: Raw salary in the CTE reaches only SUM.
+  - id: LIN-002
+    role: hr_analyst
+    sql: SELECT d.department, AVG(d.pay) FROM (SELECT e.department, e.salary AS pay FROM employees e) AS d GROUP BY d.department
+    category: privacy_lineage
+    expected: allow
+    explanation: Aliased salary in a derived table reaches only AVG.
+  - id: LIN-003
+    role: hr_analyst
+    sql: WITH a AS (SELECT e.salary AS p FROM employees e), b AS (SELECT a.p AS q FROM a) SELECT AVG(b.q) FROM b
+    category: privacy_lineage
+    expected: allow
+    explanation: A two-hop alias chain that ends in AVG.
+  - id: LIN-004
+    role: hr_analyst
+    sql: WITH s AS (SELECT e.salary FROM employees e) SELECT s.salary FROM s
+    category: privacy_lineage
+    expected: deny
+    reason: aggregate_only
+    explanation: The consumer returns the raw value.
+  - id: LIN-005
+    role: hr_analyst
+    sql: WITH s AS (SELECT e.salary FROM employees e) SELECT MAX(s.salary) FROM s
+    category: privacy_lineage
+    expected: deny
+    reason: aggregate_only
+    explanation: MAX reveals an individual value.
+  - id: LIN-006
+    role: hr_analyst
+    sql: WITH s AS (SELECT e.id, e.salary FROM employees e) SELECT s.id FROM s WHERE s.salary > 90000
+    category: privacy_lineage
+    expected: deny
+    reason: aggregate_only
+    explanation: The consumer filters on the derived salary.
+  - id: LIN-007
+    role: hr_analyst
+    sql: WITH s AS (SELECT e.id, e.salary FROM employees e) SELECT s.id FROM s ORDER BY s.salary DESC
+    category: privacy_lineage
+    expected: deny
+    reason: aggregate_only
+    explanation: The consumer orders by the derived salary.
+  - id: LIN-008
+    role: hr_analyst
+    sql: WITH s AS (SELECT e.department, e.salary FROM employees e) SELECT s.department, SUM(s.salary) OVER (PARTITION BY s.department) FROM s
+    category: privacy_lineage
+    expected: deny
+    reason: aggregate_only
+    explanation: A window aggregate is computed per row.
+  - id: LIN-009
+    role: hr_analyst
+    sql: WITH s AS (SELECT e.salary FROM employees e) SELECT AVG(s.salary) FROM s UNION ALL SELECT s.salary FROM s
+    category: privacy_lineage
+    expected: deny
+    reason: aggregate_only
+    explanation: One of two consumers returns the raw value.
+  - id: LIN-010
+    role: hr_analyst
+    sql: WITH s AS (SELECT e.salary * 12 AS yearly FROM employees e) SELECT AVG(s.yearly) FROM s
+    category: privacy_lineage
+    expected: allow
+    explanation: A derived expression of salary reaches only AVG.
+  - id: LIN-011
+    role: hr_analyst
+    sql: WITH s AS (SELECT e.salary * 12 AS yearly FROM employees e) SELECT s.yearly FROM s
+    category: privacy_lineage
+    expected: deny
+    reason: aggregate_only
+    explanation: A derived value computed from salary still reveals it.
+  - id: LIN-012
+    role: hr_analyst
+    sql: WITH s AS (SELECT e.id, e.salary FROM employees e) SELECT s.id, AVG(s.salary) FROM s GROUP BY s.id
+    category: privacy_lineage
+    expected: review
+    reason: small_cohort
+    explanation: Grouping by an identifier makes each average one person's salary; the small-cohort rule still applies through lineage.
+  # ---- tenant push-down (role support_analyst, tenant 1)
+  - id: LIN-101
+    role: support_analyst
+    sql: SELECT d.id FROM (SELECT o.id, o.tenant_id FROM orders o) AS d WHERE d.tenant_id = 1
+    category: tenant_lineage
+    expected: allow
+    explanation: The derived table projects tenant_id unmodified and the consumer pins it.
+  - id: LIN-102
+    role: support_analyst
+    sql: WITH x AS (SELECT o.id, o.tenant_id AS t FROM orders o), y AS (SELECT x.id, x.t FROM x) SELECT y.id FROM y WHERE y.t = 1
+    category: tenant_lineage
+    expected: allow
+    explanation: The pin is pushed down through two levels and an alias.
+  - id: LIN-103
+    role: support_analyst
+    sql: WITH x AS (SELECT o.id, o.tenant_id FROM orders o) SELECT x.id FROM x
+    category: tenant_lineage
+    expected: deny
+    reason: tenant_isolation
+    explanation: No consumer pins the tenant.
+  - id: LIN-104
+    role: support_analyst
+    sql: WITH x AS (SELECT o.id, o.tenant_id FROM orders o) SELECT x.id FROM x WHERE x.tenant_id = 1 UNION SELECT x.id FROM x
+    category: tenant_lineage
+    expected: deny
+    reason: tenant_isolation
+    explanation: The second consumer is unpinned.
+  - id: LIN-105
+    role: support_analyst
+    sql: WITH x AS (SELECT o.tenant_id, COUNT(*) AS n FROM orders o GROUP BY o.tenant_id) SELECT x.n FROM x WHERE x.tenant_id = 1
+    category: tenant_lineage
+    expected: deny
+    reason: tenant_isolation
+    explanation: >-
+      Aggregation in the CTE is outside the push-down rule (rows are combined before
+      filtering), so the read stays unpinned under the documented semantics.
+  - id: LIN-106
+    role: support_analyst
+    sql: WITH x AS (SELECT o.id, o.tenant_id FROM orders o LIMIT 10) SELECT x.id FROM x WHERE x.tenant_id = 1
+    category: tenant_lineage
+    expected: deny
+    reason: tenant_isolation
+    explanation: LIMIT before filtering changes which base rows are read; no push-down.
+  - id: LIN-107
+    role: support_analyst
+    sql: WITH x AS (SELECT o.id, CAST(o.tenant_id AS TEXT) AS t FROM orders o) SELECT x.id FROM x WHERE x.t = '1'
+    category: tenant_lineage
+    expected: deny
+    reason: tenant_isolation
+    explanation: The tenant column is modified by a cast; only unmodified projections push down.
+  - id: LIN-108
+    role: support_analyst
+    sql: WITH x AS (SELECT o.id, o.tenant_id FROM orders o) SELECT x.id FROM x WHERE x.tenant_id = 1 OR x.id > 0
+    category: tenant_lineage
+    expected: deny
+    reason: tenant_isolation
+    explanation: The consumer's predicate is a disjunction, so it does not pin.
+  - id: LIN-109
+    role: support_analyst
+    sql: WITH x AS (SELECT o.id, o.tenant_id FROM orders o) SELECT x.id FROM x WHERE x.tenant_id = 2
+    category: tenant_lineage
+    expected: deny
+    reason: tenant_isolation
+    explanation: The consumer pins another tenant.

@@ -17,6 +17,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from sqlguard_ninja._version import __version__
 from sqlguard_ninja.benchmarking import builtin
 from sqlguard_ninja.benchmarking.adapters import (
@@ -247,9 +249,27 @@ def cmd_benchmark_run(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-def _thresholds(args: argparse.Namespace, ci: CISection) -> Any:
+def _approved_ids(path: str | Path) -> frozenset[str]:
+    """Case ids from a LABEL_CHANGES.yaml (each entry needs id, from, to, rationale)."""
+    try:
+        data = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        raise CLIError(f"cannot read approved label changes {path}: {exc}") from exc
+    ids = set()
+    for entry in data.get("changes", []):
+        missing = {"id", "from", "to", "rationale"} - set(entry)
+        if missing:
+            raise CLIError(f"{path}: entry {entry.get('id')!r} lacks {sorted(missing)}")
+        ids.add(str(entry["id"]))
+    return frozenset(ids)
+
+
+def _thresholds(args: argparse.Namespace, ci: CISection, base: Path) -> Any:
     t = ci.thresholds(allow_benchmark_change=args.allow_benchmark_change)
     t = type(t)(**{**t.__dict__, "allow_label_changes": args.allow_label_changes})
+    approved_file = args.approved_label_changes or _resolve_file(base, ci.approved_label_changes)
+    if approved_file is not None:
+        t = type(t)(**{**t.__dict__, "approved_label_changes": _approved_ids(approved_file)})
     overrides = {
         k: getattr(args, k)
         for k in (
@@ -273,7 +293,7 @@ def cmd_benchmark_compare(args: argparse.Namespace) -> int:
         candidate = load_result(str(candidate_path))
     except (OSError, ValueError) as exc:
         raise CLIError(str(exc)) from exc
-    comp = compare(baseline, candidate, _thresholds(args, cfg.ci))
+    comp = compare(baseline, candidate, _thresholds(args, cfg.ci, base))
     report = comparison_report(comp)
     if args.report:
         Path(args.report).parent.mkdir(parents=True, exist_ok=True)
@@ -401,6 +421,7 @@ def build_parser() -> argparse.ArgumentParser:
     bc.add_argument("--max-p95-latency-increase-pct", type=float)
     bc.add_argument("--allow-benchmark-change", action="store_true")
     bc.add_argument("--allow-label-changes", action="store_true")
+    bc.add_argument("--approved-label-changes", help="LABEL_CHANGES.yaml listing reviewed relabels")
     bc.set_defaults(func=cmd_benchmark_compare)
 
     bb = bench.add_parser("baseline", help="accept a reviewed result as the new baseline")

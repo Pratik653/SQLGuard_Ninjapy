@@ -316,15 +316,15 @@ def test_tier_and_basis():
     assert dataset_tier("generated:tenant_matrix@1") == "internal"
     assert dataset_tier("human-reviewed:panel@1") == "internal"
     assert dataset_tier("external:acme-sql@1.0") == "independent"
-    base = dict(
-        id="x",
-        category="c",
-        dialect="postgres",
-        provenance="handwritten",
-        expected=Decision.DENY,
-        actual=Decision.DENY,
-        latency_ms=1.0,
-    )
+    base = {
+        "id": "x",
+        "category": "c",
+        "dialect": "postgres",
+        "provenance": "handwritten",
+        "expected": Decision.DENY,
+        "actual": Decision.DENY,
+        "latency_ms": 1.0,
+    }
     assert CaseOutcome(**base, reasons=("parse.error",)).basis == "unsupported"
     assert (
         CaseOutcome(**base, reasons=("parse.error", "tenant.missing_predicate")).basis == "policy"

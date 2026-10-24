@@ -186,3 +186,50 @@ def test_benchmark_defaults_to_builtin_without_config(capsys, tmp_path, monkeypa
     rc, out, _ = run(capsys, "benchmark", "run", "--category", "destructive")
     assert rc == 0 and "evaluations" in out
     assert (tmp_path / "results" / "latest.json").exists()
+
+
+def test_compare_approved_label_changes(capsys, tmp_path):
+    base = {
+        "schema": "sqlninja.benchmark-result/1",
+        "benchmark": {"name": "b", "version": "1", "fingerprint": "f"},
+        "adapter": {"name": "native", "version": "x"},
+        "environment": {},
+        "metrics": {
+            "overall": {
+                "recall": 1.0,
+                "precision": 1.0,
+                "false_positive_rate": 0.0,
+                "latency_ms": {"p95": 1.0},
+            }
+        },
+        "cases": [
+            {
+                "id": "A-1@postgres",
+                "expected": "deny",
+                "actual": "deny",
+                "category": "c",
+                "reasons": [],
+                "error": None,
+                "kind": "tp",
+            }
+        ],
+    }
+    cand = json.loads(json.dumps(base))
+    cand["cases"][0].update(expected="allow", actual="allow", kind="tn")
+    (tmp_path / "b.json").write_text(json.dumps(base))
+    (tmp_path / "c.json").write_text(json.dumps(cand))
+    args = [
+        "benchmark",
+        "compare",
+        "--baseline",
+        str(tmp_path / "b.json"),
+        "--candidate",
+        str(tmp_path / "c.json"),
+    ]
+    assert run(capsys, *args)[0] == 1  # unapproved relabel fails
+    approved = tmp_path / "LABEL_CHANGES.yaml"
+    approved.write_text("changes:\n  - {id: A-1, from: deny, to: allow, rationale: test}\n")
+    rc, out, _ = run(capsys, *args, "--approved-label-changes", str(approved))
+    assert rc == 0 and "Approved relabels (LABEL_CHANGES.yaml)**: 1" in out
+    approved.write_text("changes:\n  - {id: A-1, from: deny}\n")
+    assert run(capsys, *args, "--approved-label-changes", str(approved))[0] == 2

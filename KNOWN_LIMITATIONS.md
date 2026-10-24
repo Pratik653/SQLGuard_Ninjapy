@@ -11,11 +11,12 @@ security, statement timeouts, resource limits or authentication.
   (`"Orders"` in PostgreSQL) are treated as unknown tables and denied.
 
 ## Analysis
-* Tenant isolation is checked per scope: a tenant filter in an outer query does not satisfy
-  a CTE/derived table that reads the table unfiltered. That is safe but gives false positives.
-  Predicates under `OR`/`NOT` are ignored, which can also give false positives.
-* `aggregate_only` columns are checked where they are referenced. Aggregating a CTE output
-  that projects the raw column is denied (false positive).
+* Tenant push-down covers only unmodified projections in scopes without aggregation, windows
+  or row limits. Other outer filters (for example on an aggregated CTE) do not pin the inner
+  read, which is safe but can give false positives. Predicates under `OR`/`NOT` are ignored.
+* Lineage follows CTEs and derived tables, not views or functions. A raw projection that
+  reaches a statistical aggregate only through an expression in a non-SELECT clause is
+  denied (safe, possibly a false positive).
 * Small-cohort protection is heuristic: it flags filters/grouping on columns marked
   `identifying`. k-anonymity / minimum group size is not enforced.
 * JSON paths are recognised for `->`, `->>`, `#>>` and `json_extract` with literal paths.

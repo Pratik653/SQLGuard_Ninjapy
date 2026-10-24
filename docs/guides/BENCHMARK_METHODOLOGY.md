@@ -45,13 +45,16 @@ The loader rejects inconsistent labels, unknown roles, duplicate ids and duplica
   `aggregate_only` columns may appear only inside statistical aggregates (COUNT, SUM, AVG, ...),
   not in filters, grouping, ordering, window aggregates or MIN/MAX. A statistical aggregate
   filtered or grouped by an `identifying` column requires review (small cohort).
-  **Reference-based:** an aggregate-only column projected raw inside a CTE is denied even if
-  the outer query aggregates it.
+  **Lineage-aware (since 1.1.0):** a raw projection inside a CTE or derived table is
+  allowed only if every consumer aggregates that output statistically. Any raw, filtered,
+  ordered, windowed or whole-row use downstream is denied. The small-cohort rule follows
+  identifiers through derived scopes.
 * **Tenant isolation:** every scope that reads a tenant-scoped table must connect its tenant
   column, through top-level `=` conjuncts (WHERE, INNER JOIN ON, or the ON of the LEFT JOIN
   that introduces it), to the context tenant or an approved bind parameter. `OR`, `NOT`,
-  ranges, multi-value IN and casts of the column do not count. An outer filter does not pin
-  an inner scope.
+  ranges, multi-value IN and casts of the column do not count. An outer pin satisfies an inner
+  scope only through an unmodified projection of the tenant column, in a scope without
+  aggregation, windows, LIMIT/OFFSET/FETCH, and when every consumer pins it (since 1.1.0).
 * **Cost:** a static score of 50–79 means review and ≥80 means deny. Role limits on joins,
   depth and LIMIT are hard denials.
 

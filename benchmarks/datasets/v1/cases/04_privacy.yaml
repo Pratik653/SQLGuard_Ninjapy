@@ -134,11 +134,12 @@ cases:
   - id: PRV-026
     role: hr_analyst
     sql: WITH s AS (SELECT department, salary FROM employees) SELECT department, AVG(salary) FROM s GROUP BY department
-    reason: aggregate_only
+    expected: allow
+    reason: none
     explanation: >-
-      Policy semantics are reference-based: salary is projected unaggregated in the CTE scope.
-      The final result only reveals an average, so a lineage-aware engine could allow this; the
-      benchmark labels the reference-based semantics.
+      Lineage-aware semantics (since corpus 1.1.0): salary is projected raw inside the CTE, but
+      its only consumer aggregates it with AVG, so only a statistic is revealed. Relabelled
+      from deny; see benchmarks/datasets/v1/LABEL_CHANGES.yaml.
   - id: PRV-027
     role: hr_analyst
     sql: SELECT bank_account FROM employees

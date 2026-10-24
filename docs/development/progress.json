@@ -1,14 +1,106 @@
 {
   "schema": "sqlninja.progress/1",
   "workstreams": [
-    {"id": 1, "name": "Independent benchmarking", "status": "NOT_STARTED", "release": "v0.2.0", "issues": [5, 6, 7], "evidence": [], "blockers": ["external dataset needs licensed independent source (#6)"]},
-    {"id": 2, "name": "Lineage-aware privacy", "status": "NOT_STARTED", "release": "v0.2.0", "issues": [8, 9], "evidence": [], "blockers": []},
-    {"id": 3, "name": "Policy-as-code and multitenancy", "status": "NOT_STARTED", "release": "v0.3.0", "issues": [], "evidence": [], "blockers": []},
-    {"id": 4, "name": "MCP server", "status": "NOT_STARTED", "release": "v0.3.0", "issues": [], "evidence": [], "blockers": []},
-    {"id": 5, "name": "Database dialects", "status": "NOT_STARTED", "release": "v0.4.0", "issues": [11], "evidence": [], "blockers": []},
-    {"id": 6, "name": "Observability and SARIF", "status": "NOT_STARTED", "release": "v0.4.0", "issues": [14], "evidence": [], "blockers": []},
-    {"id": 7, "name": "Web dashboard and playground", "status": "NOT_STARTED", "release": "v0.5.0", "issues": [], "evidence": [], "blockers": []},
-    {"id": 8, "name": "Production deployment", "status": "NOT_STARTED", "release": "v0.5.0", "issues": [], "evidence": [], "blockers": []},
-    {"id": 9, "name": "Public zero-API-key demo", "status": "NOT_STARTED", "release": "v0.5.0", "issues": [], "evidence": [], "blockers": ["public hosting needs maintainer account authorization"]}
+    {
+      "id": 1,
+      "name": "Independent benchmarking",
+      "status": "IN_PROGRESS",
+      "release": "v0.2.0",
+      "issues": [
+        5,
+        6,
+        7
+      ],
+      "evidence": [
+        "tiers, basis, F1, Wilson CIs, CSV, hashes: VERIFIED locally",
+        "no independent dataset yet (#6); function/catalog cases absent (#5)"
+      ],
+      "blockers": [
+        "external dataset needs licensed independent source (#6)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Lineage-aware privacy",
+      "status": "VERIFIED",
+      "release": "v0.2.0",
+      "issues": [
+        8,
+        9
+      ],
+      "evidence": [
+        "corpus 1.1.0 lineage cases + tests/unit/test_lineage.py; full gate 1,738 passed"
+      ],
+      "blockers": []
+    },
+    {
+      "id": 3,
+      "name": "Policy-as-code and multitenancy",
+      "status": "NOT_STARTED",
+      "release": "v0.3.0",
+      "issues": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": 4,
+      "name": "MCP server",
+      "status": "NOT_STARTED",
+      "release": "v0.3.0",
+      "issues": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": 5,
+      "name": "Database dialects",
+      "status": "NOT_STARTED",
+      "release": "v0.4.0",
+      "issues": [
+        11
+      ],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": 6,
+      "name": "Observability and SARIF",
+      "status": "NOT_STARTED",
+      "release": "v0.4.0",
+      "issues": [
+        14
+      ],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": 7,
+      "name": "Web dashboard and playground",
+      "status": "NOT_STARTED",
+      "release": "v0.5.0",
+      "issues": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": 8,
+      "name": "Production deployment",
+      "status": "NOT_STARTED",
+      "release": "v0.5.0",
+      "issues": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": 9,
+      "name": "Public zero-API-key demo",
+      "status": "NOT_STARTED",
+      "release": "v0.5.0",
+      "issues": [],
+      "evidence": [],
+      "blockers": [
+        "public hosting needs maintainer account authorization"
+      ]
+    }
   ]
 }

@@ -31,6 +31,8 @@ class Thresholds:
     """None disables the latency gate (CI hardware varies)."""
     allow_benchmark_change: bool = False
     allow_label_changes: bool = False
+    approved_label_changes: frozenset[str] = frozenset()
+    """Case ids (base ids or ``id@dialect``) whose relabel was approved in LABEL_CHANGES.yaml."""
     """Expected outcomes of existing cases changed. Off by default: relabelling a case is
     exactly how a regression could be hidden, so it needs explicit human approval."""
 
@@ -49,6 +51,7 @@ class Comparison:
     new_parse_failures: list[str] = field(default_factory=list)
     missing_cases: list[str] = field(default_factory=list)
     label_changes: list[str] = field(default_factory=list)
+    approved_label_changes: list[str] = field(default_factory=list)
     added_cases: list[str] = field(default_factory=list)
     p95_change_pct: float | None = None
     failures: list[str] = field(default_factory=list)
@@ -69,6 +72,7 @@ class Comparison:
             "new_parse_failures",
             "missing_cases",
             "label_changes",
+            "approved_label_changes",
             "added_cases",
             "p95_change_pct",
             "failures",
@@ -93,7 +97,10 @@ def compare(
     for cid in sorted(set(base) & set(cand)):
         b, n = base[cid], cand[cid]
         if b["expected"] != n["expected"]:
-            c.label_changes.append(cid)
+            if cid in t.approved_label_changes or cid.split("@")[0] in t.approved_label_changes:
+                c.approved_label_changes.append(cid)
+            else:
+                c.label_changes.append(cid)
         if n.get("error") and not b.get("error"):
             c.new_errors.append(cid)
         if _is_parse_failure(n) and not _is_parse_failure(b) and n["expected"] == "allow":

@@ -9,9 +9,10 @@ Semantics (fail closed):
   ``INNER JOIN ... ON`` count, plus the ``ON`` clause of the ``LEFT JOIN`` that introduces
   the reference. Anything under ``OR``/``NOT`` is ignored, so ``tenant_id = 1 OR 1 = 1``
   does not pin anything.
-* A filter applied in an *outer* scope does not pin a table read in an inner scope
-  (CTE or derived table). This is stricter than the database's semantics and is a known
-  source of false positives; it keeps the rule local and auditable.
+* A filter applied in an *outer* scope pins a table read in an inner scope (CTE or derived
+  table) only when lineage proves it: the inner scope projects the tenant column unmodified,
+  does not aggregate, window, limit or offset rows, and *every* consumer pins that projection
+  (see :mod:`sqlguard_ninja.core.lineage`). Otherwise the inner read is unpinned.
 """
 
 from __future__ import annotations
@@ -21,7 +22,9 @@ from typing import Any
 
 from sqlglot import exp
 
+from sqlguard_ninja.core.analysis import ScopeFacts
 from sqlguard_ninja.core.findings import Action, Category, Finding, Severity
+from sqlguard_ninja.core.lineage import consumers_pin
 from sqlguard_ninja.core.rules.base import RuleContext
 
 Term = tuple[str, ...]
@@ -101,6 +104,38 @@ def _add_equalities(uf: _UnionFind, preds: list[exp.Expr]) -> None:
                         uf.union(left, ("multi", *t))
 
 
+def _scope_predicates(
+    select: exp.Select,
+) -> tuple[list[exp.Expr], dict[str, list[exp.Expr]]]:
+    """Top-level WHERE and INNER JOIN conjuncts, plus each LEFT JOIN's own ON conjuncts."""
+    joins: list[exp.Join] = list(select.args.get("joins") or [])
+    global_preds = _conjuncts(select.args.get("where"))
+    left_join_on: dict[str, list[exp.Expr]] = {}
+    for join in joins:
+        side = (join.side or "").upper()
+        kind = (join.kind or "").upper()
+        on_preds = _conjuncts(join.args.get("on"))
+        if not side and kind in ("", "INNER"):
+            global_preds += on_preds
+        elif side == "LEFT":
+            left_join_on[join.alias_or_name] = on_preds
+    return global_preds, left_join_on
+
+
+def _pin_status(
+    select: exp.Select, alias: str, column: str, expected: str, params: set[str]
+) -> tuple[bool, list[str], bool]:
+    """(pinned to the context tenant, other tenant values seen, multi-value IN)."""
+    global_preds, left_join_on = _scope_predicates(select)
+    uf = _UnionFind()
+    _add_equalities(uf, global_preds + left_join_on.get(alias, []))
+    members = uf.members(("col", alias, column))
+    pinned = any(m == ("const", expected) or (m[0] == "param" and m[1] in params) for m in members)
+    others = sorted({m[-1] for m in members if m[0] in ("const", "multi") and m[-1] != expected})
+    multi = any(m[0] == "multi" for m in members)
+    return pinned, others, multi
+
+
 class TenantIsolationRule:
     rule_ids = ("tenant.context_missing", "tenant.missing_predicate", "tenant.wrong_value")
 
@@ -137,35 +172,31 @@ class TenantIsolationRule:
                     )
                 continue
             select = facts.expression
-            joins: list[exp.Join] = list(select.args.get("joins") or [])
-            global_preds = _conjuncts(select.args.get("where"))
-            left_join_on: dict[str, list[exp.Expr]] = {}
-            for join in joins:
-                side = (join.side or "").upper()
-                kind = (join.kind or "").upper()
-                on_preds = _conjuncts(join.args.get("on"))
-                if not side and kind in ("", "INNER"):
-                    global_preds += on_preds
-                elif side == "LEFT":
-                    left_join_on[join.alias_or_name] = on_preds
 
             expected = str(tenant_value)
+
+            def pinned_in(
+                scope_facts: ScopeFacts, alias: str, column: str, expected: str = expected
+            ) -> bool:
+                if not isinstance(scope_facts.expression, exp.Select):
+                    return False
+                ok, _others, multi_ = _pin_status(
+                    scope_facts.expression, alias, column, expected, params
+                )
+                return ok and not multi_
+
             for ref in scoped:
                 tenant_col = catalog.tables[ref.name].tenant_column
                 assert tenant_col is not None
-                uf = _UnionFind()
-                _add_equalities(uf, global_preds + left_join_on.get(ref.alias, []))
-                members = uf.members(("col", ref.alias, tenant_col))
-                pinned = any(
-                    m == ("const", expected) or (m[0] == "param" and m[1] in params)
-                    for m in members
-                )
-                others = sorted(
-                    {m[-1] for m in members if m[0] in ("const", "multi") and m[-1] != expected}
-                )
-                multi = any(m[0] == "multi" for m in members)
+                pinned, others, multi = _pin_status(select, ref.alias, tenant_col, expected, params)
                 table_txt = ctx.name("table", ref.name)
                 if pinned and not multi:
+                    continue
+                if (
+                    not others
+                    and not multi
+                    and consumers_pin(ctx.analysis, facts, ref.alias, tenant_col, pinned_in)
+                ):
                     continue
                 if others or multi:
                     yield Finding(

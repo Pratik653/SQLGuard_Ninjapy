@@ -1,4 +1,4 @@
-# Benchmark bias review (corpus v1.0.0)
+# Benchmark bias review (corpus v1.0.0; still applicable to v1.1.0)
 
 _Written 2026-10-24 for v0.1.1. Every number below was computed from the corpus with
 `load_dataset("benchmarks/datasets/v1")`. The purpose is to say plainly how much the v1

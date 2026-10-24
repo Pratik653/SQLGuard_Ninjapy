@@ -1,5 +1,5 @@
 name: sqlguard-ninja-core
-version: "1.0.0"
+version: "1.1.0"
 description: >
   Labelled SQL policy-enforcement cases for a synthetic multi-tenant retail schema.
   Expected outcomes follow the policy semantics in docs/guides/BENCHMARK_METHODOLOGY.md and
