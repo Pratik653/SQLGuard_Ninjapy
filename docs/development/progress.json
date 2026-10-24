@@ -90,22 +90,24 @@
     {
       "id": 7,
       "name": "Web dashboard and playground",
-      "status": "VERIFIED",
+      "status": "RELEASED",
       "release": "v0.7.0",
       "issues": [],
       "evidence": [
-        "FastAPI + static Pyodide playground; 14 Playwright tests incl. axe; CI pending"
+        "FastAPI + static Pyodide playground; 14 Playwright tests incl. axe; CI pending",
+        "v0.7.0 on PyPI with provenance; fresh [demo] install served and browser-tested"
       ],
       "blockers": []
     },
     {
       "id": 8,
       "name": "Production deployment",
-      "status": "VERIFIED",
+      "status": "RELEASED",
       "release": "v0.7.0",
       "issues": [],
       "evidence": [
-        "Dockerfile/Compose/Kubernetes with hardening tests; container CI pending"
+        "Dockerfile/Compose/Kubernetes with hardening tests; container CI pending",
+        "v0.7.0 on PyPI with provenance; fresh [demo] install served and browser-tested"
       ],
       "blockers": []
     },
