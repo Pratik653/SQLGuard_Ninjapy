@@ -20,7 +20,7 @@ side by side.
 
 > **One layer, not the only one.** Static SQL inspection cannot guarantee database security.
 > Use a read-only least-privilege role, row-level security and statement timeouts as well.
-> See the [threat model](docs/security/THREAT_MODEL.md).
+> See the [threat model](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/security/THREAT_MODEL.md).
 
 ## What it does
 
@@ -36,7 +36,7 @@ side by side.
 Not yet included: governed writes (all writes are denied in v0.1); benchmark cases for
 restricted functions and system catalogs (the rules exist, but the corpus does not cover
 them); dialects beyond PostgreSQL and SQLite (they parse, but are untested). Full list:
-[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
+[KNOWN_LIMITATIONS.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/KNOWN_LIMITATIONS.md).
 
 ## Architecture
 
@@ -65,7 +65,7 @@ flowchart LR
 ```
 
 Design decisions and their trade-offs are recorded in
-[ARCHITECTURE_DECISIONS.md](docs/architecture/ARCHITECTURE_DECISIONS.md).
+[ARCHITECTURE_DECISIONS.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/architecture/ARCHITECTURE_DECISIONS.md).
 
 ## Five-minute quick start
 
@@ -147,7 +147,7 @@ ctx = RequestContext(principal=user.id, role=user.role, tenant_id=user.tenant_id
 app.invoke(state, config={"configurable": {CONTEXT_KEY: ctx}})       # nodes cannot alter config
 ```
 
-More in [AGENT_INTEGRATION.md](docs/guides/AGENT_INTEGRATION.md): the LangChain tool (its
+More in [AGENT_INTEGRATION.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/AGENT_INTEGRATION.md): the LangChain tool (its
 schema accepts only `query`), the FastAPI router, review-mode approvals and audit sinks.
 
 ## Privacy policies
@@ -188,7 +188,7 @@ REVIEW:
 Labels also apply to paths inside JSON columns (`profile->'health'->>'allergies'`).
 `sqlninja policy suggest` proposes labels from column names for a human to review; those
 suggestions are never enforced. This is a technical control, not a certification of GDPR
-compliance. Full semantics: [POLICY_REFERENCE.md](docs/guides/POLICY_REFERENCE.md).
+compliance. Full semantics: [POLICY_REFERENCE.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/POLICY_REFERENCE.md).
 
 ## Query cost analysis
 
@@ -212,7 +212,7 @@ report = PostgresPlanInspector(guard, lambda: psycopg.connect(READER_DSN)).inspe
 report.total_cost, report.plan_rows, report.static.score, report.findings
 ```
 
-See [QUERY_COST.md](docs/guides/QUERY_COST.md) and `examples/postgresql/plan_inspection_demo.py`.
+See [QUERY_COST.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/QUERY_COST.md) and `examples/postgresql/plan_inspection_demo.py`.
 
 ## Benchmark
 
@@ -224,7 +224,7 @@ sqlninja benchmark compare --baseline benchmarks/baselines/native.json --candida
 ```
 
 Results for corpus v1.0.0 (Windows 11, Python 3.11, 1,002 evaluations). Details and raw files:
-[RESULTS_v1.md](docs/benchmarks/RESULTS_v1.md).
+[RESULTS_v1.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/benchmarks/RESULTS_v1.md).
 
 | Validator | Recall | Precision | FPR | Recall / FPR within declared capability | p95 ms |
 |---|---:|---:|---:|---:|---:|
@@ -238,7 +238,7 @@ every disagreement was triaged by fixing the engine or correcting a label (both 
 100% shows consistency with the documented semantics, not independent detection quality. The
 other tools have smaller policy models (no roles, labels, aggregate-only access or review), so
 the "within capability" column is the fairer comparison. Methodology and threats to validity:
-[BENCHMARK_METHODOLOGY.md](docs/guides/BENCHMARK_METHODOLOGY.md).
+[BENCHMARK_METHODOLOGY.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/BENCHMARK_METHODOLOGY.md).
 
 ## How it relates to existing tools
 
@@ -248,7 +248,7 @@ thorough read-only validator with a tautology catch-all, which this project does
 duplicate. [agent-sql-guard](https://github.com/sakura-sky/sql-guard) has a careful
 schema-less PII denylist. What SQLGuard Ninja adds: role- and label-based policies, the agent
 checkpoint contract, a shared benchmark with isolated adapters, planner inspection, and the
-CI gate. Full comparison: [COMPETITIVE_ANALYSIS.md](docs/research/COMPETITIVE_ANALYSIS.md).
+CI gate. Full comparison: [COMPETITIVE_ANALYSIS.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/research/COMPETITIVE_ANALYSIS.md).
 
 ## Security limitations
 
@@ -262,13 +262,14 @@ CI gate. Full comparison: [COMPETITIVE_ANALYSIS.md](docs/research/COMPETITIVE_AN
   but those two categories are not measured.
 
 Use database grants, row-level security and timeouts as the authoritative controls. See the
-[threat model](docs/security/THREAT_MODEL.md) and [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
+[threat model](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/security/THREAT_MODEL.md), [limits of static analysis](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/security/STATIC_ANALYSIS_LIMITS.md),
+the [benchmark bias review](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/BENCHMARK_BIAS_REVIEW.md) and [KNOWN_LIMITATIONS.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/KNOWN_LIMITATIONS.md).
 
 ## Roadmap
 
 Next: restricted-function and system-catalog benchmark cases, an independent held-out
 corpus, lineage-aware aggregate checks, and tenant predicate push-down. Later: governed
-writes, more tested dialects, and SARIF output. Details in [ROADMAP.md](ROADMAP.md).
+writes, more tested dialects, and SARIF output. Details in [ROADMAP.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/ROADMAP.md).
 
 ## Links
 
@@ -276,18 +277,20 @@ writes, more tested dialects, and SARIF output. Details in [ROADMAP.md](ROADMAP.
 * Releases: https://github.com/Pratik653/SQLGuard_Ninjapy/releases
 * PyPI: https://pypi.org/project/sqlguard-ninja/
 * Issues: https://github.com/Pratik653/SQLGuard_Ninjapy/issues
-* Security policy: [SECURITY.md](SECURITY.md) · Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+* Security policy: [SECURITY.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/SECURITY.md) · Contributing: [CONTRIBUTING.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/CONTRIBUTING.md)
 
 ## Documentation
 
-* [Policy reference](docs/guides/POLICY_REFERENCE.md)
-* [Agent integration](docs/guides/AGENT_INTEGRATION.md)
-* [Query cost](docs/guides/QUERY_COST.md)
-* [CI integration](docs/guides/CI_INTEGRATION.md)
-* [Benchmark methodology](docs/guides/BENCHMARK_METHODOLOGY.md)
-* [Threat model](docs/security/THREAT_MODEL.md)
-* [Architecture decisions](docs/architecture/ARCHITECTURE_DECISIONS.md)
-* [Known limitations](KNOWN_LIMITATIONS.md) · [Roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md)
+* [Policy reference](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/POLICY_REFERENCE.md)
+* [Agent integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/AGENT_INTEGRATION.md)
+* [Query cost](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/QUERY_COST.md)
+* [CI integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/CI_INTEGRATION.md)
+* [Benchmark methodology](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/BENCHMARK_METHODOLOGY.md)
+* [Threat model](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/security/THREAT_MODEL.md)
+* [Limits of static SQL analysis and dialect support](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/security/STATIC_ANALYSIS_LIMITS.md)
+* [Benchmark bias review](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/BENCHMARK_BIAS_REVIEW.md)
+* [Architecture decisions](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/architecture/ARCHITECTURE_DECISIONS.md)
+* [Known limitations](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/KNOWN_LIMITATIONS.md) · [Roadmap](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/ROADMAP.md) · [Changelog](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/CHANGELOG.md)
 
 ## Supported versions
 
@@ -305,10 +308,10 @@ pytest                          # PostgreSQL tests run if SQLNINJA_PG_DSN is set
 python scripts/generate_corpus.py --check
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities privately per
-[SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/CONTRIBUTING.md). Report vulnerabilities privately per
+[SECURITY.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/SECURITY.md).
 
 ## Licence
 
 Apache-2.0. No third-party code is vendored; dependencies and their licences are listed in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). All benchmark data is synthetic.
+[THIRD_PARTY_NOTICES.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/THIRD_PARTY_NOTICES.md). All benchmark data is synthetic.

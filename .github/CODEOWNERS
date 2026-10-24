@@ -1,0 +1,26 @@
+# Code owners review changes to security-sensitive areas before they reach `main`.
+# Branch protection requires pull requests; see docs/security/THREAT_MODEL.md (T10, T12, T14).
+
+# Default owner
+*                                   @Pratik653
+
+# Enforcement engine and integrations (policy decisions, authorization, audit)
+/src/sqlguard_ninja/core/           @Pratik653
+/src/sqlguard_ninja/privacy/        @Pratik653
+/src/sqlguard_ninja/integrations/   @Pratik653
+/src/sqlguard_ninja/query_cost/     @Pratik653
+/src/sqlguard_ninja/policy/         @Pratik653
+
+# Benchmark labels, baselines and the generator (relabelling can hide regressions)
+/benchmarks/                        @Pratik653
+/scripts/generate_corpus.py         @Pratik653
+/src/sqlguard_ninja/benchmarking/   @Pratik653
+
+# CI, release pipeline and the reusable action (supply chain)
+/.github/                           @Pratik653
+/action.yml                         @Pratik653
+/pyproject.toml                     @Pratik653
+
+# Security documentation
+/SECURITY.md                        @Pratik653
+/docs/security/                     @Pratik653

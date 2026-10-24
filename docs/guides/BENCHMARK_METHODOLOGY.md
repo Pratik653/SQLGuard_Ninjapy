@@ -100,6 +100,8 @@ decision is not `allow`.
 
 ## Threats to validity
 
+A quantified review is in [BENCHMARK_BIAS_REVIEW.md](BENCHMARK_BIAS_REVIEW.md).
+
 * The corpus and the native engine were co-developed by the same authors. Native results
   show consistency with the stated semantics, not independent detection quality.
 * Some semantics are deliberately strict (reference-based privacy, scope-local tenant pins).

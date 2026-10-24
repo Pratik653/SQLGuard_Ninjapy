@@ -49,6 +49,9 @@ security, statement timeouts, resource limits or authentication.
   validates SQL against a declared policy; database-native controls remain authoritative.
 
 ## Packaging
-* README links are relative, so the docs links on the PyPI project page do not resolve in
-  0.1.0 (they work on GitHub). Planned fix: absolute links in 0.1.1.
+* In 0.1.0 the README links were relative and broke on the PyPI page; fixed in 0.1.1.
 * The runnable examples live in the repository and are not part of the wheel.
+
+## Benchmark validity
+* See docs/guides/BENCHMARK_BIAS_REVIEW.md. No independently sourced (external) evaluation set
+  exists yet; intake rules are in benchmarks/datasets/external/README.md.

@@ -9,9 +9,9 @@ v0.1.0 is released on GitHub and PyPI and verified (see RELEASE_CHECKLIST.md).
 
 ## Post-release maintenance (next)
 
-1. 0.1.1: make README links absolute so they work on the PyPI page (relative links break there).
+1. ✅ 0.1.1: README links absolute (done on release/v0.1.1).
 2. Maintainer: enable "Block command line pushes that expose my email" (GitHub → Settings → Emails);
-   add branch protection on `main` requiring the CI checks; add CODEOWNERS for `benchmarks/` and `.github/`.
+   (branch protection and CODEOWNERS are configured in 0.1.1).
 3. Review Dependabot PRs; keep actions SHA-pinned.
 4. Delete the local `backup/pre-email-rewrite` branch once you no longer need the old history (it was never pushed).
 

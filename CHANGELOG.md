@@ -3,6 +3,26 @@
 All notable changes are documented here. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, minor versions may change the API.
 
+## [0.1.1] — 2026-10-24
+
+Documentation and governance patch. No changes to policy decisions.
+
+### Fixed
+* README links were relative and broke on the PyPI project page. They are now absolute
+  GitHub URLs, and a test keeps relative links out of the README.
+
+### Added
+* `docs/security/STATIC_ANALYSIS_LIMITS.md`: limits of static analysis, compensating
+  controls, and a dialect support matrix (supported / experimental / untested).
+* `docs/guides/BENCHMARK_BIAS_REVIEW.md`: quantified review of corpus v1 bias
+  (co-development, generated labels, input distribution, outcome imbalance).
+* `benchmarks/datasets/external/`: intake rules for independently sourced, held-out
+  evaluation sets (no cases yet).
+* `.github/CODEOWNERS`, and branch protection on `main` (pull requests and CI required).
+
+### Unchanged known limitations
+* No restricted-function or system-catalog benchmark cases; no external dataset yet.
+
 ## [0.1.0] — 2026-10-24
 
 First release.

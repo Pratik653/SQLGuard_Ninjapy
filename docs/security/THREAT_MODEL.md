@@ -78,6 +78,10 @@ flowchart LR
 * Store audit events in append-only storage. Treat `sql_redacted` as potentially sensitive.
 * Protect policy files and baselines with code review (CODEOWNERS).
 
+## Further reading
+
+* [Limits of static SQL analysis and dialect support](STATIC_ANALYSIS_LIMITS.md)
+
 ## Reporting vulnerabilities
 
 See [`SECURITY.md`](../../SECURITY.md).

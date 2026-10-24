@@ -87,6 +87,7 @@ def test_policy_reference_custom_rule():
 
 
 LINK = re.compile(r"\]\(([^)#\s]+)(#[^)]*)?\)")
+REPO_BLOB = "https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/"
 
 
 @pytest.mark.parametrize("doc", DOCS, ids=lambda p: str(p.relative_to(ROOT)))
@@ -94,6 +95,11 @@ def test_relative_links_resolve(doc: Path):
     text = doc.read_text(encoding="utf-8")
     missing = []
     for target, _ in LINK.findall(text):
+        if target.startswith(REPO_BLOB):
+            # Absolute links into this repository must still point at real files.
+            if not (ROOT / target.removeprefix(REPO_BLOB)).exists():
+                missing.append(target)
+            continue
         if re.match(r"^[a-z]+:", target):
             continue  # external URL
         if not (doc.parent / target).resolve().exists():
@@ -128,3 +134,10 @@ def test_readme_privacy_yaml_fragment_is_valid():
     for role, spec in fragment["roles"].items():
         for label, access in spec["labels"].items():
             assert full["roles"][role]["labels"][label] == access
+
+
+def test_readme_has_no_relative_links():
+    """The README is the PyPI long description; relative links break there (0.1.0 defect)."""
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    relative = [t for t, _ in LINK.findall(text) if not re.match(r"^[a-z]+:", t)]
+    assert relative == []
