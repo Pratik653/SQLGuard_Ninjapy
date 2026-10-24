@@ -16,7 +16,7 @@ services:
       interval: 5s
       retries: 60
     read_only: true
-    tmpfs: ["/tmp"]
+    tmpfs: ["/tmp:exec,mode=1777"]  # pip installs compiled wheels here
     user: "65534:65534"
     environment: {HOME: /tmp, PIP_CACHE_DIR: /tmp/pip}
   prometheus:
