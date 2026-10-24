@@ -7,13 +7,14 @@ role grant fails at start-up instead of silently allowing or denying queries.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 from sqlguard_ninja.core.findings import Action
 
@@ -204,6 +205,10 @@ class Limits(_Model):
 
 class Role(_Model):
     description: str = ""
+    extends: tuple[str, ...] = Field(
+        default=(),
+        description="Parent roles. Permissions are inherited; explicit denies cannot be relaxed.",
+    )
     tables: dict[str, TableGrant] = Field(default_factory=dict)
     labels: dict[str, Access] = Field(
         default_factory=dict, description="Access per classification label."
@@ -285,12 +290,25 @@ class Disclosure(StrEnum):
     GENERIC = "generic"
 
 
+class PolicyMetadata(_Model):
+    """Audit metadata for a policy document (policy-as-code)."""
+
+    revision: str = Field(
+        default="unversioned",
+        description="Human-assigned revision, e.g. '2026.10.1'. Recorded in every decision.",
+    )
+    owner: str | None = None
+    change_ticket: str | None = None
+    description: str = ""
+
+
 class Policy(_Model):
     """Top-level policy document (``version: 1``)."""
 
     version: Literal[1] = 1
     name: str
     description: str = ""
+    metadata: PolicyMetadata = Field(default_factory=PolicyMetadata)
     dialect: str = "postgres"
     catalog: Catalog
     labels: dict[str, LabelDef] = Field(default_factory=dict)
@@ -304,16 +322,29 @@ class Policy(_Model):
     disclosure: Disclosure = Disclosure.NAMES
 
     _norm_labels = field_validator("labels", mode="before")(_lower_keys)
+    _resolved: dict[str, Role] = PrivateAttr(default_factory=dict)
+    _fingerprint: str = PrivateAttr(default="")
 
     @model_validator(mode="after")
     def _check_references(self) -> Policy:
+        from sqlguard_ninja.policy.inheritance import (  # noqa: PLC0415 - avoids an import cycle
+            InheritanceError,
+            resolve_roles,
+        )
+
         errors: list[str] = []
+        try:
+            self._resolved = resolve_roles(self.roles)
+        except InheritanceError as exc:
+            raise ValueError(str(exc)) from exc
+        canonical = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+        self._fingerprint = hashlib.sha256(canonical.encode()).hexdigest()[:16]
         for tname, table in self.catalog.tables.items():
             for cname, col in table.columns.items():
                 for label in col.effective_labels():
                     if label not in self.labels:
                         errors.append(f"{tname}.{cname}: unknown label '{label}'")
-        for rname, role in self.roles.items():
+        for rname, role in self._resolved.items():
             for label in role.labels:
                 if label not in self.labels:
                     errors.append(f"role '{rname}': unknown label '{label}'")
@@ -364,7 +395,20 @@ class Policy(_Model):
         key = name or self.default_role
         if key is None:
             return None, None
-        return key, self.roles.get(key)
+        return key, self._resolved.get(key)
+
+    @property
+    def fingerprint(self) -> str:
+        """Content hash of the policy (16 hex chars); changes with any semantic change."""
+        return self._fingerprint
+
+    @property
+    def revision(self) -> str:
+        return self.metadata.revision
+
+    def effective_role(self, name: str) -> Role | None:
+        """The role after inheritance (as enforced)."""
+        return self._resolved.get(name)
 
     def effective_limits(self, role: Role | None) -> Limits:
         return role.limits if role is not None and role.limits is not None else self.limits

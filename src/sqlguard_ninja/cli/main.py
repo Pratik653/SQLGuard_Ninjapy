@@ -154,7 +154,9 @@ def cmd_policy_check(args: argparse.Namespace) -> int:
     warnings = []
     if policy.functions.mode == "denylist":
         warnings.append("functions.mode is 'denylist'; 'allowlist' is safer for production")
-    for name, role in policy.roles.items():
+    for name in policy.roles:
+        role = policy.effective_role(name)
+        assert role is not None
         if not role.tenant_scoped and tenant_tables:
             warnings.append(f"role '{name}' is not tenant-scoped")
     for w in warnings:

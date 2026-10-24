@@ -60,8 +60,14 @@ class AuditEvent(BaseModel):
     would_block: bool
     sql_sha256: str
     sql_redacted: str | None
+    query_fingerprint: str | None = None
+    """SHA-256 of the redacted SQL: equal for queries that differ only in literals."""
     dialect: str
     policy: str
+    policy_revision: str = "unversioned"
+    policy_fingerprint: str = ""
+    decision_id: str = ""
+    correlation_id: str | None = None
     findings: list[dict[str, Any]]
     approval: dict[str, Any] | None = None
     attempt: int = 1

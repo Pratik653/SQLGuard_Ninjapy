@@ -15,6 +15,7 @@ to the SHA-256 of the exact SQL, the trace and the requesting principal, and can
 
 from __future__ import annotations
 
+import hashlib
 import threading
 import time
 import uuid
@@ -246,6 +247,7 @@ class SQLCheckpoint:
             with self._lock:
                 self._denials[context.trace_id] = self._denials.get(context.trace_id, 0) + 1
 
+        redacted = redact_sql(sql, self.dialect)
         message = self._agent_message(
             result, authorized, enforced, locked, approval_request, approval
         )
@@ -260,9 +262,14 @@ class SQLCheckpoint:
             enforced=enforced,
             would_block=would_block,
             sql_sha256=result.sql_sha256,
-            sql_redacted=redact_sql(sql, self.dialect) if self.log_redacted_sql else None,
+            sql_redacted=redacted if self.log_redacted_sql else None,
+            query_fingerprint=hashlib.sha256(redacted.encode()).hexdigest() if redacted else None,
             dialect=self.dialect,
             policy=result.policy_name,
+            policy_revision=result.policy_revision,
+            policy_fingerprint=result.policy_fingerprint,
+            decision_id=result.decision_id,
+            correlation_id=context.trace_id,
             findings=[
                 {"rule_id": f.rule_id, "action": f.action.value, "category": f.category.value}
                 for f in result.findings

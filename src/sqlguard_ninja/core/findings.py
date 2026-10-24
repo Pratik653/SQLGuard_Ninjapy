@@ -97,6 +97,10 @@ class ValidationResult(BaseModel):
     role: str | None
     policy_name: str
     policy_version: int
+    policy_revision: str = "unversioned"
+    policy_fingerprint: str = ""
+    decision_id: str = ""
+    """Unique id of this decision (correlates the result, audit event and logs)."""
     tables: tuple[str, ...] = ()
     columns: tuple[str, ...] = ()
     elapsed_ms: float = 0.0

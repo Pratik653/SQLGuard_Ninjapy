@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import time
+import uuid
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
@@ -176,6 +177,9 @@ class Guard:
             role=role_name,
             policy_name=self.policy.name,
             policy_version=self.policy.version,
+            policy_revision=self.policy.revision,
+            policy_fingerprint=self.policy.fingerprint,
+            decision_id=uuid.uuid4().hex,
             tables=tuple(analysis.base_table_names) if analysis else (),
             columns=tuple(sorted({f"{c.table}.{c.column}" for c in analysis.columns}))
             if analysis
