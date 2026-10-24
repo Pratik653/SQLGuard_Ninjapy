@@ -26,6 +26,7 @@ manager under their own licences. Licences were read from installed package meta
 | `mysql` | PyMySQL | 1.2.3 | MIT |
 | `otel` | opentelemetry-api | 1.45.1 | Apache-2.0 |
 | `prometheus` | prometheus-client | 0.26.0 | Apache-2.0 AND BSD-2-Clause |
+| `demo` | fastapi / uvicorn | 0.162.0 / 0.54.0 | MIT / BSD-3-Clause |
 
 psycopg is LGPL-3.0. SQLGuard Ninja only imports it at runtime when the `postgres` extra is
 installed. It is not modified or bundled, which is compatible with distributing SQLGuard Ninja
@@ -38,7 +39,13 @@ mypy (MIT), build (MIT). `pgserver` is optionally used for local PostgreSQL test
 declared dependency, and its package metadata on PyPI does not declare a licence. It bundles
 PostgreSQL binaries (PostgreSQL License).
 
-Tests also use jsonschema (MIT) and opentelemetry-sdk (Apache-2.0).
+Tests also use jsonschema (MIT), opentelemetry-sdk (Apache-2.0), Playwright and
+pytest-playwright (Apache-2.0), and axe-core 4.10.3 (MPL-2.0), which is downloaded at test time.
+
+The **static playground build** (`scripts/build_static_demo.py`, not part of the package)
+bundles Pyodide 0.29.5 (MPL-2.0, including CPython under the PSF License and SQLite, which is
+public domain), sqlglot (MIT), and pydantic, PyYAML and their dependencies as packaged by
+Pyodide. Their licences are listed in the generated `NOTICE.txt`.
 
 ## Test fixture: SARIF 2.1.0 JSON schema
 

@@ -1,0 +1,55 @@
+# Demo roles for the synthetic retail schema (catalog and labels: benchmarks/policies/retail_saas.yaml).
+# Every name, value and tenant in the demo database is synthetic.
+sales_analyst:
+  description: >-
+    Revenue and product performance for one store group. Customers may be counted, and
+    city may be used only inside aggregates; customers are never listed individually.
+  tables:
+    orders: [id, tenant_id, customer_id, status, total_amount, currency, created_at]
+    order_items: "*"
+    products: "*"
+    customers: [id, tenant_id, country, city, loyalty_tier, created_at]
+  labels:
+    location: aggregate_only
+  unlisted_label_access: deny
+  limits:
+    max_limit: 500
+
+customer_support:
+  description: >-
+    Helps one customer at a time with orders, deliveries and tickets. Contact details are
+    allowed; card numbers, bank details and health data never are.
+  tables:
+    customers: [id, tenant_id, full_name, email, phone, email_domain, country, city, loyalty_tier, created_at, profile]
+    orders: "*"
+    order_items: "*"
+    products: "*"
+    shipments: "*"
+    support_tickets: "*"
+    payments: [id, tenant_id, order_id, card_last4, card_brand, amount, status]
+  labels:
+    personal_identifier: allow
+    contact: allow
+    location: allow
+    free_text: allow
+    payment_card: deny
+    financial: deny
+    special_category: deny
+
+store_manager:
+  description: >-
+    Runs stores and warehouses: orders, stock, shipments and staff rosters. Salaries only by
+    department; national ids, bank details and health notes never.
+  tables:
+    orders: [id, tenant_id, customer_id, status, total_amount, currency, created_at]
+    order_items: "*"
+    products: "*"
+    shipments: [id, tenant_id, order_id, warehouse_id, carrier, tracking_number, status, shipped_at]
+    warehouses: "*"
+    employees: [id, full_name, department, title, salary, hire_date, manager_id, warehouse_id]
+  labels:
+    personal_identifier: allow
+    hr: allow
+    financial: aggregate_only
+    government_id: deny
+    special_category: deny

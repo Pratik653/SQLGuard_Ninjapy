@@ -166,3 +166,16 @@ MySQL with server defaults, so the executor refuses sessions whose `sql_mode` co
 **Consequences.** This refines ADR-005: the executed string differs from the validated one only
 in placeholder nodes, which carry server-side values, never user input. Literals and identifiers
 are not rewritten. MySQL support is limited to the scope the CI service-container tests cover.
+
+## ADR-014 — Playground: one service, static-first hosting, database-enforced sandbox
+
+**Decision.** One Python `DemoService` backs both a FastAPI server and a static build in which
+Pyodide runs the same code in the visitor's browser. Allowed queries run only in an in-memory
+synthetic SQLite database. That database enforces read-only access itself: an authorizer
+allowlist, `query_only`, engine limits and a step/time budget. The public deployment is the
+static build on GitHub Pages: there is no server to abuse, no credentials, and no cost. The
+static build self-hosts Pyodide and the wheels and verifies their checksums.
+
+**Consequences.** The first static load downloads about 16 MB. The server mode stays available
+for private use behind a proxy (Docker/Compose/Kubernetes references). In-process rate limits
+are per replica.

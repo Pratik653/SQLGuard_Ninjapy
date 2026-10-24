@@ -3,6 +3,39 @@
 All notable changes are documented here. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, minor versions may change the API.
 
+## [0.7.0] — 2026-10-24
+
+### Added
+* **Interactive playground** (`sqlguard_ninja.demo`, extra `[demo]`, `sqlninja demo serve`).
+  It runs on a synthetic retail database with three enforceable roles: Sales Analyst,
+  Customer Support and Store Manager. Features:
+  * an SQL editor and 20 example queries; tests check each one's expected decision
+  * plain-language explanations with how-to-fix hints
+  * lineage (output → base column, column usage with access per role)
+  * tenant-isolation demonstrations and a role-permission browser
+  * a benchmark dashboard that separates the 1,070 internal evaluations from the 0
+    independent ones
+* **Restricted sandbox** for allowed demo queries. The database enforces it: an authorizer
+  allowlist, `query_only`, engine limits, a step/time budget and a row cap.
+* **Static build** (`scripts/build_static_demo.py`). The same service runs in the browser with
+  Pyodide. Everything is self-hosted and checksum-verified, and the site makes no third-party
+  requests.
+* **Deployment references:**
+  * a hardened `Dockerfile`: non-root, digest-pinned base, healthcheck
+  * a Compose file: read-only, no capabilities, resource limits
+  * Kubernetes manifests: restricted security context, probes, NetworkPolicy without
+    egress, PDB, example Ingress
+  * a manual GitHub Pages workflow
+* **Server hardening:**
+  * validated `SQLNINJA_DEMO_*` settings
+  * per-client rate limiting, a body cap and 411 on chunked bodies
+  * strict CSP and security headers
+  * `/healthz` and `/readyz`
+* **Browser end-to-end tests** (Playwright) in server mode and against the offline static
+  build, including axe-core accessibility checks, keyboard use, small screens and XSS-safe
+  rendering. New CI jobs cover these tests and the container and manifests.
+* ADR-014, threat model T20, `docs/guides/DEPLOYMENT.md`.
+
 ## [0.6.0] — 2026-10-24
 
 ### Added

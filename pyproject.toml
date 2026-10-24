@@ -43,7 +43,9 @@ mysql = ["PyMySQL>=1.1"]
 # Observability (sqlguard_ninja.observability).
 otel = ["opentelemetry-api>=1.25"]
 prometheus = ["prometheus-client>=0.20"]
-all = ["sqlguard-ninja[langchain,langgraph,fastapi,postgres,mysql,mcp,otel,prometheus]"]
+# Interactive playground (sqlninja demo serve).
+demo = ["fastapi>=0.110", "uvicorn>=0.30"]
+all = ["sqlguard-ninja[langchain,langgraph,fastapi,postgres,mysql,mcp,otel,prometheus,demo]"]
 dev = [
     "sqlguard-ninja[all]",
     "pytest>=8.0",
@@ -88,6 +90,7 @@ markers = [
     "postgres: needs a PostgreSQL server (SQLNINJA_PG_DSN or pgserver)",
     "performance: latency measurements",
     "mysql: needs a MySQL server (SQLNINJA_MYSQL_DSN)",
+    "e2e: browser end-to-end tests (Playwright)",
 ]
 filterwarnings = ["error::DeprecationWarning:sqlguard_ninja.*"]
 

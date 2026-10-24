@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Try SQLGuard Ninja: SQL policy enforcement for AI agents, on a synthetic retail database. No login, no API key.">
+  <title>SQLGuard Ninja Playground</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top">
+    <div class="wrap top-inner">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 4 7v8c0 7.2 5 13.2 12 15 7-1.8 12-7.8 12-15V7L16 2Z"/><path class="logo-mark" d="m11 16 3.5 3.5L21.5 12"/></svg>
+        <div>
+          <p class="brand-name">SQLGuard Ninja <span class="brand-sub">Playground</span></p>
+          <p class="brand-tag">Policy enforcement for SQL written by AI agents</p>
+        </div>
+      </div>
+      <ul class="pills" aria-label="About this demo">
+        <li>Synthetic data</li>
+        <li>No login or API key</li>
+        <li id="mode-pill">Loading…</li>
+      </ul>
+    </div>
+    <nav class="wrap tabs" aria-label="Sections">
+      <div role="tablist" id="tablist">
+        <button role="tab" id="tab-play" aria-controls="panel-play" aria-selected="true">Playground</button>
+        <button role="tab" id="tab-tenant" aria-controls="panel-tenant" aria-selected="false" tabindex="-1">Tenant isolation</button>
+        <button role="tab" id="tab-policy" aria-controls="panel-policy" aria-selected="false" tabindex="-1">Role permissions</button>
+        <button role="tab" id="tab-bench" aria-controls="panel-bench" aria-selected="false" tabindex="-1">Benchmarks</button>
+        <button role="tab" id="tab-about" aria-controls="panel-about" aria-selected="false" tabindex="-1">About</button>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main" class="wrap">
+    <div id="boot" class="boot" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="boot-text">Starting the policy engine…</p>
+    </div>
+
+    <section id="panel-play" role="tabpanel" aria-labelledby="tab-play" class="panel" hidden>
+      <div class="grid">
+        <div class="col">
+          <div class="card">
+            <h2 class="card-title">Who is asking?</h2>
+            <p class="muted small">The role and store group come from the application's login, never from the SQL. Pick them here to see how the same query is treated differently.</p>
+            <fieldset class="roles">
+              <legend class="label">Role</legend>
+              <div id="roles" class="role-list"></div>
+            </fieldset>
+            <label class="label" for="tenant">Store group (tenant)</label>
+            <select id="tenant"></select>
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">Example queries</h2>
+            <ul id="examples" class="examples" aria-label="Example queries for the selected role"></ul>
+          </div>
+        </div>
+
+        <div class="col wide">
+          <div class="card">
+            <div class="editor-head">
+              <label class="card-title" for="sql">SQL query</label>
+              <span class="muted small">SQLite dialect · use <code>:tenant_id</code> for the caller's tenant</span>
+            </div>
+            <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off" rows="9" maxlength="5000" aria-describedby="sql-help"></textarea>
+            <div class="editor-foot">
+              <p id="sql-help" class="muted small">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run. Only queries the policy allows are executed, in a read-only sandbox.</p>
+              <button id="run" class="primary" type="button">Check &amp; run</button>
+            </div>
+          </div>
+
+          <div id="result" class="result" aria-live="polite" aria-busy="false">
+            <div class="card empty">
+              <p class="muted">Choose an example or write a query, then press <strong>Check &amp; run</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-tenant" role="tabpanel" aria-labelledby="tab-tenant" class="panel" hidden>
+      <div class="card">
+        <h2 class="card-title">One query, three store groups</h2>
+        <p>Every tenant-owned table must be filtered on the caller's tenant through the trusted <code>:tenant_id</code> parameter. The same SQL then returns different, isolated results for each store group. Writing another group's id as a literal is refused.</p>
+        <pre id="tenant-sql" class="code" tabindex="0" aria-label="Tenant isolation query"></pre>
+        <button id="tenant-run" class="primary" type="button">Run for every store group</button>
+      </div>
+      <div id="tenant-out" aria-live="polite"></div>
+    </section>
+
+    <section id="panel-policy" role="tabpanel" aria-labelledby="tab-policy" class="panel" hidden>
+      <div class="card">
+        <h2 class="card-title">What each role may read</h2>
+        <p class="muted">Access comes from the policy file: table and column grants plus classification labels. <em>Aggregate only</em> means the value may appear inside COUNT, SUM, AVG and similar, but not row by row or as a group key.</p>
+        <label class="label" for="policy-role">Role</label>
+        <select id="policy-role"></select>
+        <div class="legend" aria-label="Legend">
+          <span class="chip access-allow">allowed</span>
+          <span class="chip access-aggregate_only">aggregate only</span>
+          <span class="chip access-review">needs review</span>
+          <span class="chip access-deny">denied by label</span>
+          <span class="chip access-not_granted">not granted</span>
+        </div>
+      </div>
+      <div id="policy-out" class="tables-grid"></div>
+    </section>
+
+    <section id="panel-bench" role="tabpanel" aria-labelledby="tab-bench" class="panel" hidden>
+      <div id="bench-out"></div>
+    </section>
+
+    <section id="panel-about" role="tabpanel" aria-labelledby="tab-about" class="panel" hidden>
+      <div class="card prose">
+        <h2 class="card-title">About this playground</h2>
+        <p>SQLGuard Ninja checks SQL produced by an AI agent <strong>before</strong> it runs. It checks the SQL against a policy: which tables and columns a role may read, how classified data may be used, and which tenant's rows are in scope. It is open source (Apache-2.0).</p>
+        <h3>What happens when you press “Check &amp; run”</h3>
+        <ol>
+          <li>The query is parsed and analysed for the selected role and store group. Nothing in the SQL can change the role or tenant.</li>
+          <li>If any rule blocks it, you see why and how to fix it. Nothing runs.</li>
+          <li>If it is allowed, it runs against a small <strong>synthetic</strong> retail database. The database is in memory, read-only and private to this session. Its authorizer allows only table reads and safe functions, and engine limits and a time budget apply.</li>
+        </ol>
+        <h3>What this demo is not</h3>
+        <ul>
+          <li>It is not a security guarantee. Static analysis is one layer. Production systems still need database permissions, row-level security and timeouts.</li>
+          <li>The benchmark numbers are internal. See the Benchmarks tab.</li>
+          <li>No real customer data exists here. Names, emails and card numbers are fabricated, and card numbers use a published test range.</li>
+        </ul>
+        <p id="about-version" class="muted small"></p>
+        <p><a href="https://github.com/Pratik653/SQLGuard_Ninjapy" rel="noopener noreferrer">Source on GitHub</a> · <a href="https://pypi.org/project/sqlguard-ninja/" rel="noopener noreferrer">PyPI</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <p class="muted small">All data is synthetic. Queries you type stay in this session. The static version runs entirely in your browser and sends nothing to a server.</p>
+  </footer>
+</body>
+</html>

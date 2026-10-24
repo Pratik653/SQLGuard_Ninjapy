@@ -226,6 +226,26 @@ The four tools are `validate_sql`, `explain_policy_decision`, `inspect_query_cos
 to a database, and it exposes no execution tool. Tested with the official MCP Python SDK
 client over stdio. See [MCP_INTEGRATION.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/MCP_INTEGRATION.md).
 
+## Interactive playground
+
+A web app on a synthetic retail database. It has:
+
+* three enforceable roles (Sales Analyst, Customer Support, Store Manager)
+* example queries, with explanations and how-to-fix hints
+* lineage, tenant-isolation demonstrations and role permissions
+* a benchmark dashboard that separates internal from independent results
+
+```bash
+python -m pip install "sqlguard-ninja[demo]"
+sqlninja demo serve          # http://127.0.0.1:8000
+```
+
+Allowed queries run in a restricted in-memory sandbox. The database itself enforces this
+with an authorizer allowlist, engine limits and a time budget. A static build
+(`scripts/build_static_demo.py`) runs the whole thing in the browser with Pyodide, with no
+server. See [DEPLOYMENT.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/DEPLOYMENT.md)
+for Docker, Compose and Kubernetes.
+
 ## Observability and SARIF
 
 ```bash
@@ -322,7 +342,7 @@ the [benchmark bias review](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/m
 ## Roadmap
 
 Next: restricted-function and system-catalog benchmark cases (issue #5), an independent
-held-out corpus (issue #6), an interactive demo and a hardened deployment reference. Later:
+held-out corpus (issue #6) and public hosting of the playground. Later:
 governed writes, and database-verified SQL Server and Oracle support. Details in [ROADMAP.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/ROADMAP.md).
 
 ## Links
@@ -341,6 +361,7 @@ governed writes, and database-verified SQL Server and Oracle support. Details in
 * [Agent integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/AGENT_INTEGRATION.md)
 * [Query cost](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/QUERY_COST.md)
 * [CI integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/CI_INTEGRATION.md)
+* [Playground and deployment](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/DEPLOYMENT.md)
 * [Observability and SARIF](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/OBSERVABILITY.md)
 * [Database compatibility](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/DATABASE_COMPATIBILITY.md)
 * [Benchmark methodology](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/BENCHMARK_METHODOLOGY.md)

@@ -56,7 +56,7 @@ jobs:
       - run: python -m pip install -e ".[dev]"
       - name: Unit, security, property and SQLite integration tests
         run: >-
-          python -m pytest -q -m "not postgres and not mysql"
+          python -m pytest -q -m "not postgres and not mysql and not e2e"
           --cov=sqlguard_ninja --cov-report=term --cov-report=xml --cov-fail-under=85
       - if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -159,6 +159,58 @@ jobs:
         run: docker compose -f examples/observability/docker-compose.yml logs --tail 80
       - if: always()
         run: docker compose -f examples/observability/docker-compose.yml down -v
+
+  demo-e2e:
+    name: Demo browser tests (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install -e ".[dev]" "pytest-playwright==0.10.0"
+      - run: python -m playwright install --with-deps chromium
+      - name: Server mode (FastAPI)
+        run: python -m pytest -q -m e2e tests/e2e/test_demo_e2e.py
+      - name: Build the static (in-browser) site with verified downloads
+        run: python scripts/build_static_demo.py site
+      - name: Static mode (Pyodide, all external requests blocked)
+        run: SQLNINJA_STATIC_SITE=site python -m pytest -q -m e2e tests/e2e/test_static_demo_e2e.py
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: demo-screenshots
+          path: .pytest_tmp/screenshots
+          if-no-files-found: ignore
+
+  container:
+    name: Container image and deployment manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker build -t sqlguard-ninja-demo:ci .
+      - name: Run hardened (read-only, no capabilities, non-root) and probe
+        run: |
+          docker run -d --name demo -p 127.0.0.1:8000:8000 --read-only --tmpfs /tmp:size=16m             --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 512m             sqlguard-ninja-demo:ci
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/readyz && break; sleep 1; done
+          test "$(docker exec demo id -u)" = "10001"
+          curl -fsS http://127.0.0.1:8000/healthz
+          curl -fsS -D - -o /dev/null http://127.0.0.1:8000/ | grep -i "content-security-policy"
+          curl -fsS -H 'content-type: application/json'             -d '{"sql":"SELECT p.card_number FROM payments p WHERE p.tenant_id = :tenant_id","role":"customer_support","tenant":1}'             http://127.0.0.1:8000/api/run | python3 -c "import json,sys; r=json.load(sys.stdin); assert r['decision']=='deny' and r['execution']['status']=='not_run', r; print('deny ok')"
+          curl -fsS -H 'content-type: application/json'             -d '{"sql":"SELECT o.status, COUNT(*) AS n FROM orders o WHERE o.tenant_id = :tenant_id GROUP BY o.status","role":"store_manager","tenant":2}'             http://127.0.0.1:8000/api/run | python3 -c "import json,sys; r=json.load(sys.stdin); assert r['execution']['status']=='ok', r; print('allow ok', len(r['execution']['rows']), 'rows')"
+          test "$(docker inspect -f '{{.State.Health.Status}}' demo)" != "unhealthy"
+      - if: always()
+        run: docker logs demo 2>&1 | tail -40; docker rm -f demo || true
+      - name: Compose file is valid
+        run: docker compose -f deploy/compose/docker-compose.yml config -q
+      - name: Kubernetes manifests validate against the Kubernetes schemas
+        run: |
+          python -m pip install "kubernetes-validate==1.37.0"
+          kubernetes-validate --strict deploy/kubernetes/deployment.yaml deploy/kubernetes/service.yaml             deploy/kubernetes/networkpolicy.yaml deploy/kubernetes/pdb.yaml deploy/kubernetes/ingress.yaml
 
   sql-security-gate:
     name: SQL security regression gate (reusable action)

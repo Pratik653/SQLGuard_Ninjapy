@@ -1,0 +1,24 @@
+# Example only: adjust the host, class and TLS secret. Rate limits at the edge complement the
+# in-process limiter (which is per replica).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sqlguard-ninja-demo
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rpm: "120"
+    nginx.ingress.kubernetes.io/proxy-body-size: "16k"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [demo.example.com]
+      secretName: sqlguard-ninja-demo-tls
+  rules:
+    - host: demo.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sqlguard-ninja-demo
+                port: {name: http}

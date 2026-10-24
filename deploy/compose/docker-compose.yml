@@ -1,0 +1,28 @@
+# Hardened single-host deployment of the playground server.
+#   docker compose -f deploy/compose/docker-compose.yml up -d --build --wait
+# Put a TLS-terminating reverse proxy in front before exposing it beyond localhost, and set
+# SQLNINJA_DEMO_TRUST_PROXY_HEADERS=true only when that proxy overwrites X-Forwarded-For.
+services:
+  demo:
+    build: {context: ../.., dockerfile: Dockerfile}
+    image: sqlguard-ninja-demo:local
+    ports: ["127.0.0.1:8000:8000"]
+    environment:
+      SQLNINJA_DEMO_EXECUTE: "true"            # "false" = validation only, no sandbox
+      SQLNINJA_DEMO_RATE_LIMIT_PER_MINUTE: "60"
+      SQLNINJA_DEMO_MAX_BODY_BYTES: "16384"
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s

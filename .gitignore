@@ -28,3 +28,7 @@ htmlcov/
 !.env.example
 audit*.jsonl
 .pytest_tmp/
+
+# Static demo build output and download cache
+/.cache/
+/site/

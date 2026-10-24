@@ -90,30 +90,36 @@
     {
       "id": 7,
       "name": "Web dashboard and playground",
-      "status": "NOT_STARTED",
-      "release": "v0.5.0",
+      "status": "VERIFIED",
+      "release": "v0.7.0",
       "issues": [],
-      "evidence": [],
+      "evidence": [
+        "FastAPI + static Pyodide playground; 14 Playwright tests incl. axe; CI pending"
+      ],
       "blockers": []
     },
     {
       "id": 8,
       "name": "Production deployment",
-      "status": "NOT_STARTED",
-      "release": "v0.5.0",
+      "status": "VERIFIED",
+      "release": "v0.7.0",
       "issues": [],
-      "evidence": [],
+      "evidence": [
+        "Dockerfile/Compose/Kubernetes with hardening tests; container CI pending"
+      ],
       "blockers": []
     },
     {
       "id": 9,
       "name": "Public zero-API-key demo",
-      "status": "NOT_STARTED",
+      "status": "BLOCKED",
       "release": "v0.5.0",
       "issues": [],
-      "evidence": [],
+      "evidence": [
+        "static build ready and tested offline; pages.yml manual workflow prepared"
+      ],
       "blockers": [
-        "public hosting needs maintainer account authorization"
+        "needs maintainer authorization to enable GitHub Pages"
       ]
     }
   ]

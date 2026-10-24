@@ -365,6 +365,16 @@ def cmd_mcp(args: argparse.Namespace) -> int:  # pragma: no cover - blocks on st
     return EXIT_OK
 
 
+def cmd_demo_serve(args: argparse.Namespace) -> int:  # pragma: no cover - blocks serving
+    try:
+        from sqlguard_ninja.demo.app import serve  # noqa: PLC0415 - optional extra
+    except ImportError as exc:
+        raise CLIError('the demo needs the extra: pip install "sqlguard-ninja[demo]"') from exc
+    _out(f"SQLGuard Ninja demo on http://{args.host}:{args.port}/ (synthetic data only)")
+    serve(args.host, args.port)
+    return EXIT_OK
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.directory)
     existing = [name for name in FILES if (root / name).exists()]
@@ -578,6 +588,14 @@ def build_parser() -> argparse.ArgumentParser:
     sc.add_argument("--output", help="write to this file instead of stdout")
     sc.add_argument("--fail-on", choices=["deny", "review", "never"], default="deny")
     sc.set_defaults(func=cmd_scan)
+
+    dm = sub.add_parser("demo", help="interactive playground").add_subparsers(
+        dest="demo_cmd", required=True
+    )
+    dserve = dm.add_parser("serve", help="serve the playground (synthetic data, no login)")
+    dserve.add_argument("--host", default="127.0.0.1")
+    dserve.add_argument("--port", type=int, default=8000)
+    dserve.set_defaults(func=cmd_demo_serve)
 
     i = sub.add_parser("init", help="write a starter sqlninja.yaml, policy and test cases")
     i.add_argument("directory", nargs="?", default=".")

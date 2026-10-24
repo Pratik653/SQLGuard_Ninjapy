@@ -48,6 +48,12 @@ security, statement timeouts, resource limits or authentication.
 * `sqlninja scan` splits files on top-level semicolons. Procedural blocks, client meta-commands
   (`\i`, `GO`) and templated SQL are not understood and are reported as findings.
 
+## Playground
+* The playground validates in the SQLite dialect against a synthetic schema. It is a
+  demonstration, not a hosted SQL service.
+* Server-mode rate limits are per process. Use edge limits when running several replicas.
+* The static build downloads about 16 MB (Pyodide) on first load.
+
 ## Query cost
 * The static score uses declared `estimated_rows`; the planner uses real statistics. They
   can disagree, and neither predicts runtime.
