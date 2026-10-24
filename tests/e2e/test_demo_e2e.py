@@ -163,3 +163,11 @@ def test_accessibility_axe(app: Page, axe_source):
             ".map(v => v.id + ': ' + v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | '))"
         )
         assert result == [], (tab, result)
+
+
+def test_links_to_project_docs_and_limitations(app: Page):
+    links = app.get_by_role("navigation", name="Project links").get_by_role("link")
+    expect(links).to_have_count(4)
+    hrefs = [links.nth(i).get_attribute("href") for i in range(4)]
+    assert any(h.endswith("KNOWN_LIMITATIONS.md") for h in hrefs)
+    assert any("pypi.org/project/sqlguard-ninja" in h for h in hrefs)

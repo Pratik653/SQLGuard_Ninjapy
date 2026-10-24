@@ -218,3 +218,4 @@ tbody tr:last-child td { border-bottom: 0; }
 .prose h3 { font-size: 1rem; margin: 16px 0 4px; }
 .prose li { margin: 4px 0; }
 .foot { padding-bottom: 32px; }
+.foot-links { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0 0; padding: 0; }

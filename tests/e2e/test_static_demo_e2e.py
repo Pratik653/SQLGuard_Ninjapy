@@ -9,6 +9,7 @@ from __future__ import annotations
 import functools
 import http.server
 import os
+import shutil
 import threading
 from pathlib import Path
 
@@ -31,13 +32,16 @@ class _Handler(http.server.SimpleHTTPRequestHandler):
 
 
 @pytest.fixture(scope="module")
-def static_url():
+def static_url(tmp_path_factory):
     if not SITE or not (Path(SITE) / "config.json").exists():
         pytest.skip("static site not built (set SQLNINJA_STATIC_SITE)")
-    handler = functools.partial(_Handler, directory=str(Path(SITE).resolve()))
+    # Serve under a repository-style subpath, as GitHub Pages does (/<repo>/).
+    root = tmp_path_factory.mktemp("pages")
+    shutil.copytree(Path(SITE).resolve(), root / "SQLGuard_Ninjapy")
+    handler = functools.partial(_Handler, directory=str(root))
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    yield f"http://127.0.0.1:{server.server_address[1]}/"
+    yield f"http://127.0.0.1:{server.server_address[1]}/SQLGuard_Ninjapy/"
     server.shutdown()
 
 
