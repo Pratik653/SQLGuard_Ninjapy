@@ -62,12 +62,14 @@
     {
       "id": 5,
       "name": "Database dialects",
-      "status": "NOT_STARTED",
-      "release": "v0.4.0",
+      "status": "VERIFIED",
+      "release": "v0.5.0",
       "issues": [
         11
       ],
-      "evidence": [],
+      "evidence": [
+        "MySQL executor/binding/sql_mode guard, 26 corpus cases; 1,881 local tests; CI MySQL job pending"
+      ],
       "blockers": []
     },
     {

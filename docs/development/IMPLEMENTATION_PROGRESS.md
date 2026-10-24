@@ -10,3 +10,4 @@
 | 2c Opt-in AST tenant-filter rewrite + checkpoint | VERIFIED (local) | b0b5ade | test_tenant_rewrite (32, executes on SQLite, tenants 1-3) | |
 | 2d Docs, ADR-011/012, v0.3.0 bump | RELEASED v0.3.0 | 198a308 | full gate 1,804 passed, 94% | |
 | 3 MCP server (stdio, validation-only) | RELEASED v0.4.0 | ecec4da | 9 tests incl. real SDK client; published-package stdio smoke test | version targets adapted |
+| 4 MySQL tested dialect; SQL Server/Oracle experimental; compatibility matrix | VERIFIED (local, CI pending) | see PR | full gate 1,881 passed, 94%; 15 MySQL server tests run in CI | sql_mode parser differential found and closed (T18) |
