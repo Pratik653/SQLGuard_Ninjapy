@@ -1,5 +1,9 @@
 # Playground and deployment
 
+**Live demo:** https://pratik653.github.io/SQLGuard_Ninjapy/. It is deployed from `main` by
+`.github/workflows/pages.yml` (manual dispatch) to GitHub Pages, with Actions as the source
+and HTTPS enforced. Only the `main` branch may deploy to the `github-pages` environment.
+
 The playground is a web app on a synthetic retail database. It has:
 
 * three roles: Sales Analyst, Customer Support and Store Manager
@@ -118,5 +122,13 @@ On GitHub Pages, a `<meta>` CSP applies instead.
 
 `.github/workflows/pages.yml` builds the site, tests that exact build in Chromium with every
 external request blocked, and deploys it. It runs **only when started manually**, after the
-maintainer enables Pages (Settings → Pages → Source: GitHub Actions). Do not describe the demo
-as live until an unauthenticated browser has loaded the real HTTPS URL and run a query.
+maintainer enables Pages (Settings → Pages → Source: GitHub Actions). Pages was enabled
+on 2026-10-24. The deployment was then checked at the public URL in fresh, unauthenticated
+browser contexts, on desktop and mobile:
+
+* all three roles, with allowed and denied queries
+* tenant isolation, explanations, lineage, permissions and benchmarks
+* no external hosts contacted
+* no missing assets and no console errors
+
+Redeploy after changing the demo by running the workflow again.

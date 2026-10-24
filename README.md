@@ -7,6 +7,11 @@ benchmarking for LLM-generated SQL.**
 [![PyPI](https://img.shields.io/pypi/v/sqlguard-ninja)](https://pypi.org/project/sqlguard-ninja/)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+[![Live demo](https://img.shields.io/badge/live%20demo-try%20it%20in%20your%20browser-2f5bd3)](https://pratik653.github.io/SQLGuard_Ninjapy/)
+
+**[Try the live demo →](https://pratik653.github.io/SQLGuard_Ninjapy/)** No login, API key or install needed. It uses a synthetic
+retail database with three roles. Everything runs in your browser (Pyodide), so your queries
+are not sent anywhere.
 
 When an LLM writes SQL, the system prompt is not a security boundary. SQLGuard Ninja sits
 between the model and the database. It checks every statement against a declared policy for
@@ -14,7 +19,7 @@ the *authenticated* caller: which tables and columns a role may use, which data 
 appear only in aggregates or only after human approval, and which tenant the caller belongs
 to. It records an audit trail and gives the agent an explanation it can act on.
 
-It ships with a labelled benchmark corpus (551 cases, 1,044 dialect evaluations) and a
+It ships with a labelled benchmark corpus (577 cases, 1,070 dialect evaluations, all internal) and a
 regression gate for CI. The same benchmark harness can evaluate other open-source guards
 side by side.
 
@@ -227,6 +232,8 @@ to a database, and it exposes no execution tool. Tested with the official MCP Py
 client over stdio. See [MCP_INTEGRATION.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/MCP_INTEGRATION.md).
 
 ## Interactive playground
+
+**Live:** https://pratik653.github.io/SQLGuard_Ninjapy/ (GitHub Pages, static, runs in your browser).
 
 A web app on a synthetic retail database. It has:
 

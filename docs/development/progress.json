@@ -114,15 +114,14 @@
     {
       "id": 9,
       "name": "Public zero-API-key demo",
-      "status": "BLOCKED",
-      "release": "v0.5.0",
+      "status": "RELEASED",
+      "release": "v0.7.0",
       "issues": [],
       "evidence": [
-        "static build ready and tested offline; pages.yml manual workflow prepared"
+        "static build ready and tested offline; pages.yml manual workflow prepared",
+        "live at https://pratik653.github.io/SQLGuard_Ninjapy/; Pages run 40131808993; unauthenticated desktop+mobile verification passed"
       ],
-      "blockers": [
-        "needs maintainer authorization to enable GitHub Pages"
-      ]
+      "blockers": []
     }
   ]
 }

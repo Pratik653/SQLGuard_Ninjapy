@@ -14,3 +14,4 @@
 | 5 Observability: OTel spans, Prometheus metrics, audit schema, SARIF scan, Grafana + synthetic stack | RELEASED v0.6.0 | 3867989 | full gate 1,916 passed, 94%; CI stack: 224 decisions scraped, Grafana query success | redaction leak (hex/E''/$$/U&/N''/INTERVAL) found and fixed (T19) |
 | 6 Playground: 3 roles, examples, explanations, lineage, tenant demo, permissions, benchmark dashboard; static Pyodide build | RELEASED v0.7.0 | 0a5dfb3 | 1,959 passed, 94%; CI e2e 13 + 1 static (offline) passed | database-enforced sandbox |
 | 7 Deployment: Dockerfile, Compose, Kubernetes, health, config validation, rate/body limits | RELEASED v0.7.0 | 0a5dfb3 | CI: container as UID 10001 read-only, probes, deny/allow API ok; 5 manifests pass kubernetes-validate --strict | no Docker locally |
+| 8 Public demo on GitHub Pages | RELEASED (live) | 42eeb5c | Pages run 40131808993; live checks desktop + mobile | https://pratik653.github.io/SQLGuard_Ninjapy/ |
