@@ -190,6 +190,23 @@ Labels also apply to paths inside JSON columns (`profile->'health'->>'allergies'
 suggestions are never enforced. This is a technical control, not a certification of GDPR
 compliance. Full semantics: [POLICY_REFERENCE.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/POLICY_REFERENCE.md).
 
+## Policy as code
+
+Roles can inherit (`extends`), and explicit denies cannot be relaxed by a child. Every decision
+carries the policy revision, the policy fingerprint and a decision id. Review changes before
+activating them:
+
+```bash
+sqlninja policy template multi_tenant_saas --output policy.yaml
+sqlninja policy diff old.yaml policy.yaml --fail-on-relaxation
+sqlninja policy simulate --policy old.yaml --against policy.yaml --cases cases.yaml
+sqlninja policy explain --policy policy.yaml --role support --column customers.email
+```
+
+Optional: `SQLCheckpoint(..., rewrite_tenant_filters=True)` adds missing tenant filters
+through the AST and executes only the re-validated rewrite. See
+[POLICY_AS_CODE.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/POLICY_AS_CODE.md).
+
 ## Query cost analysis
 
 Every validation includes an explainable static score that uses the catalog's
@@ -284,6 +301,7 @@ writes, more tested dialects, and SARIF output. Details in [ROADMAP.md](https://
 ## Documentation
 
 * [Policy reference](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/POLICY_REFERENCE.md)
+* [Policy as code](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/POLICY_AS_CODE.md)
 * [Agent integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/AGENT_INTEGRATION.md)
 * [Query cost](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/QUERY_COST.md)
 * [CI integration](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/CI_INTEGRATION.md)

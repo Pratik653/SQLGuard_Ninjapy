@@ -9,6 +9,7 @@ start-up instead of silently changing behaviour. Run `sqlninja policy check --po
 ```yaml
 version: 1
 name: shop
+metadata: {revision: "2026.10.1", owner: data-governance}   # recorded in every decision
 dialect: postgres            # default dialect for validate()
 disclosure: names            # or "generic": agent messages never name tables/columns
 
@@ -35,6 +36,7 @@ catalog:
 
 roles:
   support:
+    # extends: [base_role]          # inherit grants; inherited explicit denies cannot be relaxed
     tables:
       customers: [id, tenant_id, email, email_domain]   # or "*", or {columns, deny_columns, column_access}
     labels: {contact: allow, health: deny}
@@ -82,6 +84,9 @@ cost: {enabled: true, review_score: 50, deny_score: 80, large_table_rows: 100000
    labels of that path, its ancestors and its descendants.
 
 Without roles, an implicit role grants every catalog table and denies every labelled column.
+
+Inheritance, templates, `policy diff` / `simulate` / `explain` and the tenant-filter rewrite
+are described in [POLICY_AS_CODE.md](POLICY_AS_CODE.md).
 
 ## Decisions
 

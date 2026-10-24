@@ -122,6 +122,25 @@ Extras: `langchain`, `langgraph`, `fastapi`, `postgres` (`psycopg`), `dev`.
 Apache-2.0 provides an explicit patent grant, which matters to enterprise adopters. It is
 compatible with all dependencies we use (MIT, BSD, Apache-2.0). No third-party code is vendored.
 
+## ADR-011 — Opt-in tenant-filter rewrite (refines ADR-005)
+
+**Context.** Enterprise users want missing tenant filters added rather than rejected.
+
+**Decision.** `sqlguard_ninja.tenancy.apply_tenant_filters` may add tenant predicates through
+the AST. It is opt-in (`rewrite_tenant_filters=True`), uses bind parameters only, refuses on any
+non-tenant problem or ambiguous ownership, and **re-validates** the rewritten SQL, which is the
+exact string executed. ADR-005's invariant still holds: the validated string and the executed
+string are identical.
+
+**Consequences.** The rewritten SQL is the qualified form produced by sqlglot. It is equivalent
+but may look different from the input. Database RLS remains the authoritative control.
+
+## ADR-012 — Role inheritance with sticky explicit denies
+
+**Decision.** `extends` merges grants. A child cannot relax an inherited explicit deny, and an
+attempt is a load error. `policy diff` works on the effective (inherited) policy and classifies
+relaxations so reviewers and CI can gate them.
+
 ## ADR-010 — Read-only scope for v0.1
 
 **Decision.** v0.1 validates read-only workloads only. All writes are denied. Supporting governed

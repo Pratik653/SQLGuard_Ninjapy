@@ -19,6 +19,9 @@ LLM ──SQL──▶ SQLCheckpoint.evaluate(sql, RequestContext) ──▶ aut
 | `review` | not run | run only with an approval bound to the SQL hash, trace and principal (single use, TTL, no self-approval) | run |
 | `audit` | run, recorded `enforced=False` | run, recorded | run |
 
+`rewrite_tenant_filters=True` (off by default) adds missing tenant filters through the AST and
+executes the re-validated rewrite. See [POLICY_AS_CODE.md](POLICY_AS_CODE.md).
+
 `max_denied_attempts` (default 5) locks a trace after repeated denials, so a retry loop
 cannot grind through rephrasings.
 

@@ -38,10 +38,12 @@
     {
       "id": 3,
       "name": "Policy-as-code and multitenancy",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "release": "v0.3.0",
       "issues": [],
-      "evidence": [],
+      "evidence": [
+        "inheritance, diff/simulate/explain/templates, tenant rewrite, audit metadata; 1,804 tests pass locally"
+      ],
       "blockers": []
     },
     {

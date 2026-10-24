@@ -3,6 +3,27 @@
 All notable changes are documented here. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, minor versions may change the API.
 
+## [0.3.0] — 2026-10-24
+
+### Added
+* **Role inheritance** (`extends`): grants merge, explicit denies are sticky, and conflicts,
+  unknown parents and cycles are load errors.
+* **Policy metadata and identity:** `metadata.revision/owner/change_ticket`, a policy
+  fingerprint, and a per-decision `decision_id`. Audit events add `policy_revision`,
+  `policy_fingerprint`, `decision_id`, `correlation_id`, a literal-insensitive
+  `query_fingerprint`, and `tenant_filter_rewrite`.
+* **Policy CLI:** `policy template`, `policy diff` (effect classification,
+  `--fail-on-relaxation`), `policy simulate` (`--against`, `--fail-on-change`),
+  `policy explain` (decision or column access, with inheritance source).
+* **Templates:** `minimal`, `multi_tenant_saas`, `analytics_readonly`.
+* **Opt-in AST tenant-filter rewrite** (`sqlguard_ninja.tenancy`,
+  `SQLCheckpoint(rewrite_tenant_filters=True)`) with re-validation and refusal rules (ADR-011).
+* Docs: `docs/guides/POLICY_AS_CODE.md`; ADR-011, ADR-012; threat model T6a/T6b.
+
+### Compatibility
+* Policy files without the new fields behave exactly as before. `ValidationResult` gains
+  fields with defaults.
+
 ## [0.2.0] — 2026-10-24
 
 ### Added

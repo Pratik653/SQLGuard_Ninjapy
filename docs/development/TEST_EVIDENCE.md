@@ -9,3 +9,4 @@
 | 2026-10-24 | v0.2.0 main | CI run 40107938223 on 8b59a38 | success |
 | 2026-10-24 | v0.2.0 publish | release.yml run 40108113801 | build + publish success; wheel and sdist with PEP 740 provenance; 0.1.0 and 0.1.1 unchanged |
 | 2026-10-24 | v0.2.0 fresh install | `pip install --no-cache-dir --index-url https://pypi.org/simple sqlguard-ninja==0.2.0` (Python 3.13, outside repo) | import from site-packages; lineage allow/deny and tenant push-down via CLI; bundled benchmark 1,044 evaluations with CSV, tiers, 14 file hashes |
+| 2026-10-24 | v0.3.0 candidate | full gate | 1,804 passed, 94%; build + twine PASSED; 3 templates in wheel |
