@@ -126,7 +126,7 @@ def test_multiple_parents_merge_in_order():
 
 
 def test_inherited_grants_are_validated_against_catalog():
-    with pytest.raises(PolicyError, match="unknown column 'orders.nope'"):
+    with pytest.raises(PolicyError, match=r"unknown column 'orders.nope'"):
         policy({"a": {"tables": {"orders": ["nope"]}}, "b": {"extends": ["a"]}})
 
 

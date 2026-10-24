@@ -68,6 +68,8 @@ class AuditEvent(BaseModel):
     policy_fingerprint: str = ""
     decision_id: str = ""
     correlation_id: str | None = None
+    tenant_filter_rewrite: bool = False
+    """True when the executed SQL is the AST-rewritten form with tenant filters added."""
     findings: list[dict[str, Any]]
     approval: dict[str, Any] | None = None
     attempt: int = 1

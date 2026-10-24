@@ -191,6 +191,7 @@ class SQLCheckpoint:
         max_denied_attempts: int | None = 5,
         dialect: str | None = None,
         log_redacted_sql: bool = True,
+        rewrite_tenant_filters: bool = False,
     ) -> None:
         self.guard = guard
         self.mode = EnforcementMode(mode)
@@ -199,12 +200,16 @@ class SQLCheckpoint:
         self.max_denied_attempts = max_denied_attempts
         self.dialect = dialect or guard.policy.dialect
         self.log_redacted_sql = log_redacted_sql
+        self.rewrite_tenant_filters = rewrite_tenant_filters
+        """Opt-in: add missing tenant filters via AST rewrite, then validate the rewrite."""
         self._attempts: dict[str, int] = {}
         self._denials: dict[str, int] = {}
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------ evaluate
-    def evaluate(self, sql: str, context: RequestContext) -> CheckpointOutcome:
+    def evaluate(
+        self, sql: str, context: RequestContext, *, _rewritten: bool = False
+    ) -> CheckpointOutcome:
         started = time.perf_counter()
         policy_ctx = context.policy_context(self.guard.policy.tenant.context_key)
         result = self.guard.validate(
@@ -270,6 +275,7 @@ class SQLCheckpoint:
             policy_fingerprint=result.policy_fingerprint,
             decision_id=result.decision_id,
             correlation_id=context.trace_id,
+            tenant_filter_rewrite=_rewritten,
             findings=[
                 {"rule_id": f.rule_id, "action": f.action.value, "category": f.category.value}
                 for f in result.findings
@@ -340,9 +346,29 @@ class SQLCheckpoint:
         """Evaluate, then run ``executor(sql, params)`` only if authorized.
 
         ``params`` contains the trusted context values (e.g. ``tenant_id``) for bind
-        parameters. The SQL is executed exactly as validated.
+        parameters. The SQL is executed exactly as validated. With
+        ``rewrite_tenant_filters=True``, a query whose only problem is a missing tenant filter
+        is rewritten (see :mod:`sqlguard_ninja.tenancy`); the *rewritten* string is then
+        evaluated, audited and executed.
         """
-        outcome = self.evaluate(sql, context)
+        rewritten = False
+        if self.rewrite_tenant_filters:
+            # Imported lazily: tenancy depends on the guard, not the other way round.
+            from sqlguard_ninja.tenancy import (  # noqa: PLC0415
+                TenantRewriteRefused,
+                apply_tenant_filters,
+            )
+
+            policy_ctx = context.policy_context(self.guard.policy.tenant.context_key)
+            try:
+                rewrite = apply_tenant_filters(
+                    self.guard, sql, role=context.role, context=policy_ctx, dialect=self.dialect
+                )
+            except TenantRewriteRefused:
+                rewrite = None  # fall through: evaluate the original and report its findings
+            if rewrite is not None and rewrite.rewritten:
+                sql, rewritten = rewrite.sql, True
+        outcome = self.evaluate(sql, context, _rewritten=rewritten)
         if not outcome.authorized:
             raise SQLBlockedError(outcome)
         params = context.policy_context(self.guard.policy.tenant.context_key)
