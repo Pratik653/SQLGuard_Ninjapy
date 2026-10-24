@@ -9,4 +9,4 @@
 | 2b Policy diff/simulate/explain/templates CLI | VERIFIED (local) | e64859a | test_policy_tools (21) | |
 | 2c Opt-in AST tenant-filter rewrite + checkpoint | VERIFIED (local) | b0b5ade | test_tenant_rewrite (32, executes on SQLite, tenants 1-3) | |
 | 2d Docs, ADR-011/012, v0.3.0 bump | RELEASED v0.3.0 | 198a308 | full gate 1,804 passed, 94% | |
-| 3 MCP server (stdio, validation-only) | VERIFIED (local) | see PR | 9 tests incl. real SDK client | released as v0.4.0 (version targets adapted) |
+| 3 MCP server (stdio, validation-only) | RELEASED v0.4.0 | ecec4da | 9 tests incl. real SDK client; published-package stdio smoke test | version targets adapted |

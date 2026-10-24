@@ -13,3 +13,5 @@
 | 2026-10-24 | v0.3.0 release | PR #19 12/12; main CI on 198a308 success; release.yml run 40115952065 success | PyPI files with provenance |
 | 2026-10-24 | v0.3.0 fresh install | pip from PyPI, Python 3.13, outside repo (3rd attempt; CDN lag) | templates, policy check/explain (inheritance), tenant rewrite, decision metadata OK |
 | 2026-10-24 | v0.4.0 candidate (MCP) | tests/integration/test_mcp_server.py | 9 passed, including a real stdio ClientSession |
+| 2026-10-24 | v0.4.0 release | PR #20 12/12; main CI on ecec4da success; release.yml run 40117676554 success | wheel and sdist on PyPI, both provenance endpoints 200; 0.1.0-0.3.0 unchanged |
+| 2026-10-24 | v0.4.0 fresh install + MCP stdio | `pip install --no-cache-dir "sqlguard-ninja[mcp]==0.4.0"` (Python 3.13, outside repo, 4th attempt; CDN lag), then SDK `stdio_client`/`ClientSession` against installed `sqlninja mcp` | 4 tools; allow/deny/cross-tenant deny; 100,001-char input `invalid_input`; forged `role` argument has no effect (deny); capabilities hide denied tables, `read_only: true`; no finding detail leaked |

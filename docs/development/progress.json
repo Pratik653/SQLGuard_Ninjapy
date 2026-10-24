@@ -50,11 +50,12 @@
     {
       "id": 4,
       "name": "MCP server",
-      "status": "VERIFIED",
+      "status": "RELEASED",
       "release": "v0.4.0",
       "issues": [],
       "evidence": [
-        "stdio server; 9 tests incl. official SDK ClientSession"
+        "stdio server; 9 tests incl. official SDK ClientSession",
+        "v0.4.0 on PyPI with provenance; fresh [mcp] install + published-package stdio session verified"
       ],
       "blockers": []
     },
