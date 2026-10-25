@@ -6,16 +6,16 @@ and MySQL 8.4 service containers).
 
 | Gate | Evidence | Status |
 |---|---|---|
-| Native or driver binding verified per advertised executor | `test_sqli_engines.py`: 39 payloads round-trip byte-exact as data and match nothing as predicates; typed values; tables unchanged. SQLite and PostgreSQL ran locally (202 passed); PostgreSQL and MySQL run in CI. | Local ✅ / CI: see PR |
+| Native or driver binding verified per advertised executor | `test_sqli_engines.py`: 39 payloads round-trip byte-exact as data and match nothing as predicates; typed values; tables unchanged. Local: SQLite + PostgreSQL 202 passed. CI run 40186165511: **PostgreSQL 16, 335 passed** (service container and Compose); **MySQL 8.4, 118 passed**. | ✅ |
 | No known critical or high bypass in `execute_safe` | Audit SQLI-001…009 (`docs/security/SQL_INJECTION_THREAT_MODEL.md`). SQLI-001 (critical) and SQLI-002 (high) were reproduced on PostgreSQL, fixed, and covered by regression tests. No open findings. | ✅ |
 | Existing policy and tenant guarantees intact | Full suite: 2,291 passed, including the native corpus at 100% (unchanged labels and decisions), tenant rewrite and MCP | ✅ |
-| Real database integration tests | CI PostgreSQL and MySQL jobs run `test_sqli_engines.py` (+ markers on PostgreSQL) | CI: see PR |
-| Required CI checks | 17 checks on the PR and on `main` | CI |
+| Real database integration tests | PR #29 CI run 40186165511 (above). The first run found a test-helper bug (charset passed twice), which was fixed; no product failures. | ✅ |
+| Required CI checks | PR #29: 16/16 checks; `main` CI 40186361462 on fbeeaa3 success | ✅ |
 | New injection security tests | 432 tests: contract 91, markers 28, engines 307 (SQLite, PostgreSQL and MySQL variants), integrations 4, property 2 (700 generated cases) | ✅ local |
 | No public API regression | `execute()`, executors, `mysql_executor` and `bind_placeholders` are kept. `bind_placeholders` is deprecated (documented). New names are additive. | ✅ |
 | No secrets in logs, traces, errors or SARIF | `test_sqli_integrations.py` canary: parameter values are absent from audit, logs, spans, metrics and error messages. The v0.6 canary tests still pass. | ✅ |
-| Build + `twine check --strict` | Run at the gate | Gate |
-| Fresh install outside the repository | Run after publish | Post-release |
+| Build + `twine check --strict` | Wheel and sdist PASSED | ✅ |
+| Fresh install outside the repository | `pip install --no-cache-dir sqlguard-ninja==0.8.0` (Python 3.13, `-I`): payload echo exact, payload filters match nothing, benign match, 8/8 contract refusals, SQLI-001/002 denied on 3 dialects, caller tenant filter blocked | ✅ |
 | Documentation accurate | LANDSCAPE, THREAT_MODEL, PREVENTION, LIMITATIONS, ADR-015, README, CHANGELOG, SECURITY.md | ✅ |
 | Independent tools | Bandit 1.9.4 on `src`: no high-severity findings. The one B608 is the fixture loader (catalog names only, values bound). B102 is the benchmark workers loading a bundled protocol file. B101 asserts are type narrowing. pip-audit on the locked environment: no known vulnerabilities. | ✅ |
 
@@ -30,3 +30,12 @@ bandit -q -r src && pip-audit -r <(pip freeze --exclude-editable)
 
 Passing these tests does not prove universal SQL injection immunity
 (see `docs/security/SQL_INJECTION_LIMITATIONS.md`).
+
+## Release record
+
+* Release: https://github.com/Pratik653/SQLGuard_Ninjapy/releases/tag/v0.8.0, tag `v0.8.0` on
+  `fbeeaa35e669d78509d0d3c8f3793c753cc26e23`. Trusted-publishing run 40186558377. PyPI provenance
+  returns 200 for the wheel and the sdist. 0.1.0–0.7.0 are unchanged.
+* Public demo redeployed with 0.8.0 (Pages run 40186761561). Live check: `@tenant_id` is denied
+  with `parse.ambiguous_parameter`, allowed examples still run, no external hosts, no page
+  errors.
