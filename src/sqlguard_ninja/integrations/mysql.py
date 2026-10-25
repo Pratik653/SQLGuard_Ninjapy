@@ -1,23 +1,22 @@
-"""MySQL executor (read-only, time-limited) with AST-based parameter binding.
+"""MySQL executors (read-only, time-limited) with PyMySQL driver binding.
 
-PyMySQL cannot bind named parameters, and sqlglot's MySQL dialect cannot parse PyMySQL's
-``%s`` markers. Validated MySQL SQL therefore uses named placeholders (``:tenant_id``).
-Before execution this executor:
+Validated MySQL SQL uses named placeholders (``:tenant_id``). Before execution the statement
+goes through :func:`~sqlguard_ninja.integrations.binding.bind_statement`, which locates the
+placeholders with the MySQL tokenizer and translates only them to PyMySQL's ``%(name)s``
+markers (doubling every other ``%``); undoing that translation gives back the validated text.
+The values are then passed to ``cursor.execute(sql, params)``: **PyMySQL** escapes them
+(client-side binding; PyMySQL has no server-side prepared statements), honouring the
+server's ``NO_BACKSLASH_ESCAPES`` status and sending bytes as hex literals. This library
+never interpolates values itself (ADR-015 supersedes the AST literal substitution of ADR-013).
 
-1. parses the exact validated string with sqlglot (MySQL dialect);
-2. replaces each named placeholder whose value the trusted context supplies with a literal
-   (integers, or strings with quotes doubled), refusing any placeholder that is not supplied.
-   Strings containing a backslash or NUL are refused: their meaning depends on the server's
-   ``NO_BACKSLASH_ESCAPES`` mode, and guessing it is not conservative;
-3. sends the result without format parameters, so ``%`` in string literals needs no escaping.
-
-Only placeholder nodes change; string literals and identifiers are never re-written (ADR-013).
-Each statement runs in a ``START TRANSACTION READ ONLY`` with ``MAX_EXECUTION_TIME`` and is
-rolled back. Use a MySQL account that has only SELECT privileges.
+Each statement runs in ``START TRANSACTION READ ONLY`` with ``MAX_EXECUTION_TIME`` and is
+rolled back. The connection must use a UTF-8 character set (``utf8mb4``): multi-byte
+character sets such as GBK have historically broken client-side escaping. Use a MySQL account
+that has only SELECT privileges.
 
 The guard parses MySQL with the server's default lexical rules. Some ``sql_mode`` flags change
 how the server reads the same text (``ANSI_QUOTES`` turns ``"x"`` from a string into a column,
-``NO_BACKSLASH_ESCAPES`` changes where a string ends), so the executor refuses to run on a
+``NO_BACKSLASH_ESCAPES`` changes where a string ends), so the executors refuse to run on a
 session with any flag in :data:`UNSAFE_SQL_MODES`. Custom executors must do the same.
 
 Requires ``pip install "sqlguard-ninja[mysql]"``.
@@ -30,6 +29,13 @@ from typing import Any
 
 import sqlglot
 from sqlglot import exp
+
+from sqlguard_ninja.integrations.binding import (
+    BoundStatement,
+    ParamStyle,
+    SQLBindingError,
+    bind_statement,
+)
 
 Rows = list[dict[str, Any]]
 
@@ -56,7 +62,11 @@ def check_sql_mode(sql_mode: str) -> None:
 
 
 def bind_placeholders(sql: str, params: Mapping[str, Any]) -> str:
-    """Return MySQL SQL with named placeholders replaced by escaped literals."""
+    """Deprecated (kept for compatibility; no longer used by the executors, ADR-015).
+
+    Returns MySQL SQL with named placeholders replaced by literals. Prefer driver binding
+    through :meth:`SQLCheckpoint.execute_safe` with :class:`MySQLSafeExecutor`.
+    """
     statements = [s for s in sqlglot.parse(sql, dialect="mysql") if s is not None]
     if len(statements) != 1:
         raise BindError("expected exactly one statement")
@@ -82,27 +92,58 @@ def bind_placeholders(sql: str, params: Mapping[str, Any]) -> str:
     return tree.transform(_replace).sql(dialect="mysql")
 
 
+SAFE_CHARSETS = frozenset({"utf8mb4", "utf8mb3", "utf8"})
+
+
+def _run(
+    connect: Callable[[], Any], stmt: BoundStatement, max_rows: int, max_execution_ms: int
+) -> Rows:  # pragma: no cover - needs a MySQL server
+    conn = connect()
+    try:
+        charset = str(getattr(conn, "charset", "")).lower()
+        if charset not in SAFE_CHARSETS:
+            raise UnsafeSessionError(
+                f"refusing to execute: connection charset {charset!r} is not UTF-8"
+            )
+        with conn.cursor() as cur:
+            cur.execute("SELECT @@SESSION.sql_mode")
+            check_sql_mode(str(cur.fetchone()[0] or ""))
+            cur.execute("SET SESSION MAX_EXECUTION_TIME = %s", (int(max_execution_ms),))
+            cur.execute("START TRANSACTION READ ONLY")
+            try:
+                cur.execute(stmt.sql, stmt.params)  # PyMySQL binds; one formatting pass only
+                cols = [d[0] for d in cur.description or ()]
+                return [dict(zip(cols, row, strict=False)) for row in cur.fetchmany(max_rows)]
+            finally:
+                conn.rollback()
+    finally:
+        conn.close()
+
+
 def mysql_executor(
     connect: Callable[[], Any], max_rows: int = 200, max_execution_ms: int = 5000
 ) -> Callable[[str, Mapping[str, Any]], Rows]:  # pragma: no cover - needs a MySQL server
-    """Executor for :meth:`SQLCheckpoint.execute` using a PyMySQL connection factory."""
+    """Executor for :meth:`SQLCheckpoint.execute`: binds the trusted context values only."""
 
     def run(sql: str, params: Mapping[str, Any]) -> Rows:
-        bound = bind_placeholders(sql, params)
-        conn = connect()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("SELECT @@SESSION.sql_mode")
-                check_sql_mode(str(cur.fetchone()[0] or ""))
-                cur.execute("SET SESSION MAX_EXECUTION_TIME = %s", (int(max_execution_ms),))
-                cur.execute("START TRANSACTION READ ONLY")
-                try:
-                    cur.execute(bound)  # no args: '%' in literals is not a format marker
-                    cols = [d[0] for d in cur.description or ()]
-                    return [dict(zip(cols, row, strict=False)) for row in cur.fetchmany(max_rows)]
-                finally:
-                    conn.rollback()
-        finally:
-            conn.close()
+        stmt = bind_statement(sql, "mysql", None, trusted=params, paramstyle="pyformat")
+        return _run(connect, stmt, max_rows, max_execution_ms)
 
     return run
+
+
+class MySQLSafeExecutor:
+    """Executor for :meth:`SQLCheckpoint.execute_safe` (PyMySQL connection factory)."""
+
+    dialect = "mysql"
+    paramstyle: ParamStyle = "pyformat"
+
+    def __init__(
+        self, connect: Callable[[], Any], max_rows: int = 200, max_execution_ms: int = 5000
+    ) -> None:
+        self.connect, self.max_rows, self.max_execution_ms = connect, max_rows, max_execution_ms
+
+    def __call__(self, stmt: BoundStatement) -> Rows:  # pragma: no cover - needs a MySQL server
+        if stmt.paramstyle != "pyformat":
+            raise SQLBindingError("MySQL executor needs a 'pyformat' statement")
+        return _run(self.connect, stmt, self.max_rows, self.max_execution_ms)

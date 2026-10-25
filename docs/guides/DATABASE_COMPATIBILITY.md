@@ -8,7 +8,7 @@ experimental dialects as unsupported for security decisions.
 |---|---|---|---|---|---|---|
 | PostgreSQL | sqlglot `postgres` | PostgreSQL 16: service container and Docker Compose in CI, embedded locally | full corpus (dialect-tagged cases) | static score + `EXPLAIN (FORMAT JSON)` inspector | `psycopg_executor` (read-only transaction, statement timeout) | **Supported** |
 | SQLite | sqlglot `sqlite` | in-process fixture database in every test job | full corpus | static score | `sqlite_executor` (`PRAGMA query_only`) | **Supported** |
-| MySQL 8 | sqlglot `mysql` | MySQL 8.4 service container in CI (`tests/integration/test_mysql.py`) | 26 MySQL-specific cases (`cases/09_mysql.yaml`); shared semantics via the engine | static score (no planner integration) | `mysql_executor` (`START TRANSACTION READ ONLY`, `MAX_EXECUTION_TIME`, AST-based binding) | **Supported for the tested scope** (see notes) |
+| MySQL 8 | sqlglot `mysql` | MySQL 8.4 service container in CI (`tests/integration/test_mysql.py`) | 26 MySQL-specific cases (`cases/09_mysql.yaml`); shared semantics via the engine | static score (no planner integration) | `MySQLSafeExecutor` / `mysql_executor` (`START TRANSACTION READ ONLY`, `MAX_EXECUTION_TIME`, PyMySQL driver binding) | **Supported for the tested scope** (see notes) |
 | SQL Server (T-SQL) | sqlglot `tsql` | none | parser-level smoke tests only | static score | none | **Experimental** |
 | Oracle | sqlglot `oracle` | none | parser-level smoke tests only | static score | none | **Experimental** |
 | Others (Snowflake, BigQuery, ...) | sqlglot | none | none | static score | none | **Untested** |
@@ -20,11 +20,12 @@ experimental dialects as unsupported for security decisions.
   distinct tables, so the guard compares identifiers exactly and **fails closed** on mixed-case
   references (`o.ID` is denied: a documented false positive). Use lower-case identifiers in
   policies and queries.
-* **Placeholders.** Use named placeholders (`:tenant_id`). The MySQL executor replaces approved
-  placeholders through the AST with literals of the trusted context values (integers, or
-  strings with quotes doubled; strings containing a backslash or NUL are refused), then runs
-  the statement without driver format parameters (ADR-013). PyMySQL's `%s` style cannot be
-  parsed, so the guard denies it.
+* **Placeholders.** Use named placeholders (`:tenant_id`). Since 0.8.0 the executors translate
+  only the placeholder tokens to PyMySQL's `%(name)s` markers, doubling every other `%`. The
+  translation is checked to be reversible to the validated text. The values are then passed to
+  PyMySQL's own binding, which is client-side escaping that honours `NO_BACKSLASH_ESCAPES`.
+  The connection must use UTF-8. This replaces ADR-013's literal substitution (ADR-015). Use
+  `execute_safe` with `MySQLSafeExecutor` for caller-supplied values.
 * **Session `sql_mode`.** The guard lexes MySQL with the server defaults. `ANSI_QUOTES` (`"x"`
   becomes a column), `NO_BACKSLASH_ESCAPES` (a string ends at a different place),
   `PIPES_AS_CONCAT`, `HIGH_NOT_PRECEDENCE` and `ANSI` would make the server read validated SQL

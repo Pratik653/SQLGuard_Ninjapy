@@ -231,6 +231,26 @@ The four tools are `validate_sql`, `explain_policy_decision`, `inspect_query_cos
 to a database, and it exposes no execution tool. Tested with the official MCP Python SDK
 client over stdio. See [MCP_INTEGRATION.md](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/guides/MCP_INTEGRATION.md).
 
+## SQL injection prevention
+
+```python
+rows = checkpoint.execute_safe(
+    "SELECT o.id FROM orders o WHERE o.tenant_id = :tenant_id AND o.email = :email",
+    ctx,
+    PsycopgSafeExecutor(reader_dsn),
+    params={"email": untrusted_email},
+)
+```
+
+`execute_safe` keeps values out of SQL text. They are bound by the driver: psycopg
+server-side, `sqlite3` natively, and PyMySQL through its own escaping. The template is
+authorized by the policy, and the tenant value can only come from the trusted request
+context. Placeholders are located with the dialect tokenizer, other markers are refused, and
+dynamic identifiers go through allowlist helpers. This reduces SQL injection risk; it is not
+a guarantee. Read the [prevention guide](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/security/SQL_INJECTION_PREVENTION.md)
+and its [limitations](https://github.com/Pratik653/SQLGuard_Ninjapy/blob/main/docs/security/SQL_INJECTION_LIMITATIONS.md).
+**0.8.0 also fixes a critical PostgreSQL tenant-isolation bypass (SQLI-001)**: upgrade from earlier versions.
+
 ## Interactive playground
 
 **Live:** https://pratik653.github.io/SQLGuard_Ninjapy/ (GitHub Pages, static, runs in your browser).

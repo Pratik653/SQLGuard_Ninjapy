@@ -87,7 +87,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
-      - run: python -m pytest -q -m postgres tests/integration/test_postgres.py
+      - run: python -m pytest -q -m postgres tests/integration/test_postgres.py tests/security/test_sqli_engines.py tests/security/test_sqli_parameter_markers.py -rs
       - run: python examples/postgresql/plan_inspection_demo.py
 
   mysql:
@@ -113,7 +113,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
-      - run: python -m pytest -q -m mysql tests/integration/test_mysql.py -rs
+      - run: python -m pytest -q -m mysql tests/integration/test_mysql.py tests/security/test_sqli_engines.py -rs
 
   docker-compose:
     name: Docker Compose environment
@@ -129,7 +129,7 @@ jobs:
           python-version: "3.12"
       - run: docker compose -f docker/docker-compose.yml up -d --wait
       - run: python -m pip install -e ".[dev]"
-      - run: python -m pytest -q -m postgres tests/integration/test_postgres.py
+      - run: python -m pytest -q -m postgres tests/integration/test_postgres.py tests/security/test_sqli_engines.py tests/security/test_sqli_parameter_markers.py -rs
       - if: always()
         run: docker compose -f docker/docker-compose.yml down -v
 

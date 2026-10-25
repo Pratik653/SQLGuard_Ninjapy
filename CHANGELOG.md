@@ -3,6 +3,49 @@
 All notable changes are documented here. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, minor versions may change the API.
 
+## [0.8.0] — 2026-10-25
+
+### Security
+* **SQLI-001 (critical, PostgreSQL, ≤ 0.7.0).** The tenant rule accepted `@tenant_id` (parsed
+  by sqlglot as a bind parameter) as the trusted tenant pin. PostgreSQL evaluates `@x` as
+  `abs(x)`, so the query returned every tenant's rows. The guard now denies
+  `@x`/`$x`/`@@x` markers (`parse.ambiguous_parameter`), and the tenant rule ignores them.
+* **SQLI-002 (high, PostgreSQL).** `@column` hid a classified column from the privacy and
+  column rules. Fixed by the same change.
+* **SQLI-003 (medium, MySQL).** User and system variables (`@x`, `@@datadir`) are now denied.
+* **SQLI-005.** The MySQL executors use PyMySQL's driver binding instead of library-side
+  literal substitution (ADR-015 supersedes ADR-013), and require a UTF-8 connection charset.
+* The PostgreSQL executors refuse sessions with `standard_conforming_strings=off`.
+
+### Added
+* `SQLCheckpoint.execute_safe(sql, context, executor, params)`. Values are bound by the
+  driver; the template is authorized first. The contract:
+  * tokenizer-located `:name` placeholders, cross-checked against the AST
+  * exact names
+  * reserved trusted names in any letter case
+  * a type allowlist
+  * one statement
+* Executors `SQLiteSafeExecutor`, `PsycopgSafeExecutor` (server-side binding) and
+  `MySQLSafeExecutor`.
+* `safe_identifier` / `safe_order_by` allowlist helpers for dynamic identifiers.
+* `ApprovedTemplateRule` / `ApprovedTemplates`: an optional allowlist of statement structures.
+* The FastAPI router's `/query` accepts `params` when given a `safe_executor`.
+* An SQL injection regression suite:
+  * binding contract
+  * parameter-marker divergences
+  * real-engine tests on SQLite, PostgreSQL and MySQL 8.4
+  * property-based tests
+  * a check that parameters never reach audit events, logs or telemetry
+
+  The CI PostgreSQL and MySQL jobs now run the engine suites.
+* Docs: SQL_INJECTION_LANDSCAPE, SQL_INJECTION_THREAT_MODEL (gap analysis),
+  SQL_INJECTION_PREVENTION, SQL_INJECTION_LIMITATIONS, the release gate, ADR-015, and threat
+  model T21.
+
+### Fixed
+* Legacy executors select trusted parameters by whole name (`:tenant_id` no longer matches
+  `:tenant_id_2`).
+
 ## [0.7.0] — 2026-10-24
 
 ### Added
