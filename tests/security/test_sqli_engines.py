@@ -96,7 +96,7 @@ def _mysql_engine(policy):
     u = urlparse(dsn)
     db, user, pw = "sqlninja_sqli", "sqlninja_sqli_reader", secrets.token_hex(12)
 
-    def connect(name, password, database=None, **kw):
+    def connect(name, password, database=None, charset="utf8mb4"):
         return pymysql.connect(
             host=u.hostname,
             port=u.port or 3306,
@@ -104,8 +104,7 @@ def _mysql_engine(policy):
             password=password,
             database=database,
             autocommit=False,
-            charset="utf8mb4",
-            **kw,
+            charset=charset,
         )
 
     admin = connect(u.username or "root", u.password or "")
