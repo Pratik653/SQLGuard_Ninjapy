@@ -179,3 +179,35 @@ static build self-hosts Pyodide and the wheels and verifies their checksums.
 **Consequences.** The first static load downloads about 16 MB. The server mode stays available
 for private use behind a proxy (Docker/Compose/Kubernetes references). In-process rate limits
 are per replica.
+
+## ADR-015 — execute_safe: driver binding with a checked placeholder contract (supersedes ADR-013)
+
+**Context.** There was no API for untrusted values, so integrators put them into SQL text. The
+MySQL executor substituted literals through the AST. The audit also found sqlglot reading
+`@x`/`$x` as bind parameters where engines read variables or operators (SQLI-001/002).
+
+**Decision.** `SQLCheckpoint.execute_safe(sql, context, executor, params)` takes `:name`
+templates and keeps values separate. The checkpoint locates placeholders with the dialect
+tokenizer, cross-checks them against the AST, enforces an exact name match and a type
+allowlist, and reserves every trusted context name in any letter case. It then authorizes
+the template and hands it, with the values, to a `SafeExecutor` that binds through the
+driver:
+
+* `sqlite3`: native binding
+* psycopg 3: server-side binding
+* PyMySQL: client-side driver escaping
+
+The `%(name)s` translation touches only placeholder tokens and is verified reversible, so the
+executed statement is the validated one. The library never interpolates values, and nothing
+falls back to interpolation. Executors refuse sessions whose lexing differs from the guard:
+
+* MySQL: unsafe `sql_mode` flags or a non-UTF-8 charset
+* PostgreSQL: `standard_conforming_strings` off
+
+The guard denies variable and parameter markers. `execute()` keeps its behaviour.
+`bind_placeholders` is kept but deprecated.
+
+**Consequences.**
+* Templates use one placeholder style, `:name`.
+* PostgreSQL array slices written `a[1:2]` are refused in templates (the colon is ambiguous).
+* MySQL binding remains client-side and depends on PyMySQL's escaping.

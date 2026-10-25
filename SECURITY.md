@@ -4,7 +4,18 @@
 
 | Version | Supported |
 |---|---|
-| 0.1.x | ✅ |
+| 0.8.x | ✅ |
+| < 0.8 | ❌ upgrade: 0.8.0 fixes SQLI-001 (critical) and SQLI-002 (high) on PostgreSQL |
+
+## Fixed vulnerabilities
+
+* **SQLI-001 (critical), versions ≤ 0.7.0, PostgreSQL.** `WHERE t.tenant_id = @tenant_id` was
+  accepted as tenant-pinned. PostgreSQL reads `@x` as `abs(x)`, so the query returned every
+  tenant's rows. Fixed in 0.8.0.
+* **SQLI-002 (high), versions ≤ 0.7.0, PostgreSQL.** `@column` hid a column from the privacy
+  and column rules. Fixed in 0.8.0.
+
+Details and regression tests: docs/security/SQL_INJECTION_THREAT_MODEL.md.
 
 ## Reporting a vulnerability
 

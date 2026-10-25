@@ -78,8 +78,8 @@ def _term(node: exp.Expr) -> Term | None:
         return ("const", "-" + str(node.this.this))
     if isinstance(node, exp.Placeholder):
         return ("param", str(node.name or node.this or "?").lower())
-    if isinstance(node, exp.Parameter):
-        return ("param", str(node.name).lower())
+    # exp.Parameter (``@x``/``$x``) is deliberately not a bind parameter here: engines read it
+    # as a variable or an operator, never as the trusted tenant value (SQLI-001).
     return None
 
 

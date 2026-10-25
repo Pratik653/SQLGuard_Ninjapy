@@ -8,6 +8,8 @@ import uuid
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
+from sqlglot import exp
+
 from sqlguard_ninja.core.analysis import analyse
 from sqlguard_ninja.core.findings import (
     Action,
@@ -231,6 +233,24 @@ class Guard:
                     action=Action.DENY,
                     message="The query is too complex to analyse safely.",
                     detail=f"{analysis.node_count} AST nodes > {max_nodes}",
+                )
+            )
+        elif analysis.root is not None and analysis.root.find(exp.Parameter, exp.SessionParameter):
+            # ``@x``/``$x``/``@@x`` mean different things per engine: a bind parameter
+            # (SQLite), a session or system variable (MySQL), or the absolute-value operator
+            # applied to a column (PostgreSQL ``@x``). Reading them as a value would hide
+            # columns and tenant filters from the rules, so they are refused (SQLI-001/002).
+            out.append(
+                Finding(
+                    rule_id="parse.ambiguous_parameter",
+                    category=Category.PARSE,
+                    severity=Severity.HIGH,
+                    action=Action.DENY,
+                    message=(
+                        "Variables and '@'/'$' parameter markers are not allowed. "
+                        "Use named placeholders such as :tenant_id."
+                    ),
+                    remediation="Bind values with :name placeholders.",
                 )
             )
         elif analysis.qualify_error is not None:

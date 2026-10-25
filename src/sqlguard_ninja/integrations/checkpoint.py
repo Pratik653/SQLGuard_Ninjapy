@@ -28,8 +28,10 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 from sqlguard_ninja.core.findings import Decision, ValidationResult
 from sqlguard_ninja.core.guard import Guard
 from sqlguard_ninja.integrations.audit import AuditEvent, AuditSink, redact_sql
+from sqlguard_ninja.integrations.binding import SQLBindingError
 
 if TYPE_CHECKING:
+    from sqlguard_ninja.integrations.executors import Rows, SafeExecutor
     from sqlguard_ninja.observability import Telemetry
 
 T = TypeVar("T")
@@ -401,3 +403,58 @@ class SQLCheckpoint:
             raise SQLBlockedError(outcome)
         params = context.policy_context(self.guard.policy.tenant.context_key)
         return executor(sql, params)
+
+    # -------------------------------------------------------------- execute_safe
+    def execute_safe(
+        self,
+        sql: str,
+        context: RequestContext,
+        executor: SafeExecutor,
+        params: Mapping[str, Any] | None = None,
+    ) -> Rows:
+        """Authorize ``sql`` and run it with **driver-bound** values.
+
+        ``sql`` is a template with named placeholders (``:username``); ``params`` holds the
+        untrusted values for them. Trusted values (the tenant and other
+        :class:`RequestContext` attributes) are bound from ``context`` and cannot be supplied
+        or overridden through ``params``. The contract is checked before authorization
+        (:class:`~sqlguard_ninja.integrations.binding.SQLBindingError` on violation); then the
+        exact template is evaluated, audited and, only if authorized, handed to ``executor``
+        together with the values. Nothing is interpolated by this library. With
+        ``rewrite_tenant_filters=True`` the rewritten template is the one bound, evaluated
+        and executed.
+        """
+        from sqlguard_ninja.integrations.binding import (  # noqa: PLC0415
+            bind_statement,
+            colon_placeholders,
+        )
+
+        dialect = getattr(executor, "dialect", None)
+        if dialect != self.dialect:
+            raise SQLBindingError(
+                f"executor dialect {dialect!r} does not match checkpoint dialect {self.dialect!r}"
+            )
+        trusted = context.policy_context(self.guard.policy.tenant.context_key)
+        # Check the contract on the caller's template first, so a reserved or unknown
+        # parameter is refused before any rewrite can change the placeholders.
+        bind_statement(sql, self.dialect, params, trusted, executor.paramstyle)
+        rewritten = False
+        if self.rewrite_tenant_filters:
+            from sqlguard_ninja.tenancy import (  # noqa: PLC0415
+                TenantRewriteRefused,
+                apply_tenant_filters,
+            )
+
+            try:
+                rewrite = apply_tenant_filters(
+                    self.guard, sql, role=context.role, context=trusted, dialect=self.dialect
+                )
+            except TenantRewriteRefused:
+                rewrite = None
+            if rewrite is not None and rewrite.rewritten:
+                sql, rewritten = colon_placeholders(rewrite.sql, self.dialect), True
+        stmt = bind_statement(sql, self.dialect, params, trusted, executor.paramstyle)
+        outcome = self.evaluate(stmt.validated_sql, context, _rewritten=rewritten)
+        if not outcome.authorized:
+            raise SQLBlockedError(outcome)
+        return executor(stmt)

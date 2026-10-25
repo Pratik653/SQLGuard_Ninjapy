@@ -11,6 +11,12 @@ from sqlguard_ninja.integrations.audit import (
     LoggingAuditSink,
     redact_sql,
 )
+from sqlguard_ninja.integrations.binding import (
+    BoundStatement,
+    SQLBindingError,
+    safe_identifier,
+    safe_order_by,
+)
 from sqlguard_ninja.integrations.checkpoint import (
     ApprovalDecision,
     ApprovalQueue,
@@ -23,12 +29,18 @@ from sqlguard_ninja.integrations.checkpoint import (
     SQLBlockedError,
     SQLCheckpoint,
 )
+from sqlguard_ninja.integrations.executors import (
+    PsycopgSafeExecutor,
+    SafeExecutor,
+    SQLiteSafeExecutor,
+)
 
 __all__ = [
     "ApprovalDecision",
     "ApprovalQueue",
     "ApprovalRequest",
     "AuditEvent",
+    "BoundStatement",
     "CallbackApprover",
     "CheckpointOutcome",
     "DenyAllApprover",
@@ -36,8 +48,14 @@ __all__ = [
     "InMemoryAuditSink",
     "JsonlAuditSink",
     "LoggingAuditSink",
+    "PsycopgSafeExecutor",
     "RequestContext",
+    "SQLBindingError",
     "SQLBlockedError",
     "SQLCheckpoint",
+    "SQLiteSafeExecutor",
+    "SafeExecutor",
     "redact_sql",
+    "safe_identifier",
+    "safe_order_by",
 ]

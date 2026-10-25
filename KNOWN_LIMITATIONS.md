@@ -54,6 +54,12 @@ security, statement timeouts, resource limits or authentication.
 * Server-mode rate limits are per process. Use edge limits when running several replicas.
 * The static build downloads about 16 MB (Pyodide) on first load.
 
+## SQL injection
+* Only code that uses `execute_safe` gets driver-bound values. String-built SQL elsewhere is
+  not made safe. See docs/security/SQL_INJECTION_LIMITATIONS.md.
+* MySQL binding is PyMySQL's client-side escaping, not server-side prepared statements.
+* Templates accept `:name` placeholders only, and PostgreSQL `a[1:2]` slices are refused.
+
 ## Query cost
 * The static score uses declared `estimated_rows`; the planner uses real statistics. They
   can disagree, and neither predicts runtime.

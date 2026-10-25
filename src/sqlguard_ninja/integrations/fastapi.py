@@ -13,12 +13,18 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from sqlguard_ninja.integrations.binding import SQLBindingError
 from sqlguard_ninja.integrations.checkpoint import RequestContext, SQLBlockedError, SQLCheckpoint
+from sqlguard_ninja.integrations.executors import SafeExecutor
+
+Scalar = str | int | float | bool | None
 
 
 class SQLRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     sql: str = Field(max_length=100_000)
+    params: dict[str, Scalar] | None = Field(default=None, max_length=100)
+    """Untrusted values for ``:name`` placeholders (needs ``safe_executor``)."""
 
 
 class FindingOut(BaseModel):
@@ -41,7 +47,9 @@ def create_router(
     context_dependency: Callable[..., RequestContext],
     executor: Callable[[str, Mapping[str, Any]], Any] | None = None,
     prefix: str = "/v1/sql",
+    safe_executor: SafeExecutor | None = None,
 ) -> APIRouter:
+    """``safe_executor`` enables ``/query`` with driver-bound ``params`` (execute_safe)."""
     router = APIRouter(prefix=prefix, tags=["sql"])
 
     @router.post("/validate", response_model=ValidateResponse)
@@ -66,8 +74,7 @@ def create_router(
             trace_id=ctx.trace_id,
         )
 
-    if executor is not None:
-        run = executor
+    if executor is not None or safe_executor is not None:
 
         @router.post("/query")
         def query(
@@ -75,7 +82,17 @@ def create_router(
             ctx: RequestContext = Depends(context_dependency),  # noqa: B008
         ) -> dict[str, Any]:
             try:
-                rows = checkpoint.execute(body.sql, ctx, run)
+                if safe_executor is not None:
+                    rows = checkpoint.execute_safe(body.sql, ctx, safe_executor, body.params)
+                elif body.params:
+                    raise HTTPException(status_code=400, detail={"error": "params_unsupported"})
+                else:
+                    assert executor is not None
+                    rows = checkpoint.execute(body.sql, ctx, executor)
+            except SQLBindingError as exc:
+                raise HTTPException(
+                    status_code=400, detail={"error": "invalid_parameters", "message": str(exc)}
+                ) from exc
             except SQLBlockedError as exc:
                 raise HTTPException(
                     status_code=403,
