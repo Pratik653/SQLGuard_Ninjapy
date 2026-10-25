@@ -123,5 +123,21 @@
       ],
       "blockers": []
     }
+  ],
+  "milestones": [
+    {
+      "release": "v0.8.0",
+      "name": "SQL injection prevention",
+      "status": "RELEASED",
+      "commit": "fbeeaa35e669d78509d0d3c8f3793c753cc26e23",
+      "evidence": [
+        "CI 40186165511: PostgreSQL 335 / MySQL 118 passed",
+        "release.yml 40186558377; provenance 200",
+        "fresh install verified; live demo redeployed (Pages 40186761561)"
+      ],
+      "open": [
+        "GHSA/CVE for SQLI-001/002 (maintainer decision)"
+      ]
+    }
   ]
 }
